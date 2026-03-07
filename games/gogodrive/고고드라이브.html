@@ -1,0 +1,2560 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>고고드라이브 - GoGo Drive!</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect x='12' y='20' width='40' height='18' rx='5' fill='%23FFCC00'/><rect x='8' y='30' width='48' height='12' rx='3' fill='%23FFB800'/><rect x='18' y='22' width='12' height='10' rx='2' fill='%2388DDFF'/><rect x='34' y='22' width='12' height='10' rx='2' fill='%2388DDFF'/><circle cx='18' cy='44' r='6' fill='%23333'/><circle cx='18' cy='44' r='3' fill='%23888'/><circle cx='46' cy='44' r='6' fill='%23333'/><circle cx='46' cy='44' r='3' fill='%23888'/><rect x='6' y='34' width='8' height='4' rx='1' fill='%23FF4444'/><rect x='50' y='34' width='8' height='4' rx='1' fill='%23FF4444'/></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Segoe UI', Arial, sans-serif; }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            pointer-events: none; z-index: 10;
+        }
+        .overlay.active { pointer-events: all; }
+        .overlay.hidden { display: none; }
+
+        /* Start Screen */
+        #startScreen {
+            background: radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%);
+        }
+        #startScreen h1 {
+            font-size: clamp(48px, 10vw, 80px); color: #FFD700;
+            text-shadow: 3px 3px 0 #FF6600, 6px 6px 0 rgba(0,0,0,0.3);
+            margin-bottom: 5px; letter-spacing: 4px;
+        }
+        #startScreen h2 {
+            font-size: clamp(20px, 4vw, 32px); color: #fff;
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+            margin-bottom: 40px; font-weight: normal;
+        }
+        .btn {
+            padding: 16px 50px; font-size: 24px; font-weight: bold;
+            border: none; border-radius: 50px; cursor: pointer;
+            color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            transition: transform 0.15s, box-shadow 0.15s;
+            pointer-events: all;
+        }
+        .btn:hover { transform: scale(1.08); }
+        .btn:active { transform: scale(0.95); }
+        .btn-start {
+            background: linear-gradient(180deg, #FF6600, #E04500);
+            box-shadow: 0 6px 0 #B03500, 0 8px 20px rgba(0,0,0,0.4);
+        }
+        .btn-restart {
+            background: linear-gradient(180deg, #4CAF50, #388E3C);
+            box-shadow: 0 6px 0 #2E7D32, 0 8px 20px rgba(0,0,0,0.4);
+        }
+        .controls-hint {
+            margin-top: 30px; color: rgba(255,255,255,0.7); font-size: 15px;
+            text-align: center; line-height: 1.6;
+        }
+
+        /* HUD */
+        #hud { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 5; }
+        #scoreBox {
+            position: absolute; top: 20px; left: 20px;
+            background: linear-gradient(180deg, #2196F3, #1565C0);
+            border-radius: 16px; padding: 8px 24px; min-width: 130px;
+            text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        #scoreLabel { color: #fff; font-size: 16px; font-weight: bold; display: block; }
+        #scoreValue {
+            color: #FFD700; font-size: 38px; font-weight: bold; display: block;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+        }
+        #scoreValue.flash { transform: scale(1.3); }
+        #speedIndicator {
+            position: absolute; top: 20px; right: 20px;
+            color: #fff; font-size: 14px; font-weight: bold;
+            background: rgba(0,0,0,0.4); border-radius: 10px; padding: 6px 14px;
+        }
+
+        /* Game Over */
+        #gameoverScreen {
+            background: radial-gradient(ellipse at center, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.93) 100%);
+            overflow-y: auto;
+        }
+        #goContainer {
+            display: flex; flex-direction: column; align-items: center;
+            max-width: 420px; width: 92%; padding: 20px 0;
+        }
+        #goTitle {
+            font-size: clamp(40px, 9vw, 66px); font-weight: 900; color: #FF3333;
+            text-shadow: 0 0 20px rgba(255,0,0,0.6), 0 0 60px rgba(255,0,0,0.3), 3px 3px 0 #880000;
+            letter-spacing: 6px; margin-bottom: 20px;
+            animation: goTitleAnim 0.8s ease-out;
+        }
+        @keyframes goTitleAnim {
+            0% { transform: scale(3) rotate(-8deg); opacity: 0; filter: blur(8px); }
+            60% { transform: scale(0.92) rotate(2deg); opacity: 1; filter: blur(0); }
+            80% { transform: scale(1.05) rotate(-1deg); }
+            100% { transform: scale(1) rotate(0); }
+        }
+        #goStats {
+            display: flex; gap: 14px; margin-bottom: 18px;
+            flex-wrap: wrap; justify-content: center; width: 100%;
+        }
+        .go-stat {
+            background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px; padding: 10px 16px; text-align: center;
+            min-width: 85px; flex: 1;
+            animation: goStatIn 0.5s ease-out both;
+        }
+        .go-stat:nth-child(1) { animation-delay: 0.4s; }
+        .go-stat:nth-child(2) { animation-delay: 0.6s; }
+        .go-stat:nth-child(3) { animation-delay: 0.8s; }
+        @keyframes goStatIn {
+            from { transform: translateY(20px) scale(0.8); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .go-stat-label {
+            color: rgba(255,255,255,0.5); font-size: 10px;
+            font-weight: bold; letter-spacing: 2px;
+        }
+        .go-stat-value {
+            color: #FFD700; font-size: 26px; font-weight: 900;
+            margin-top: 2px; text-shadow: 0 0 8px rgba(255,215,0,0.4);
+        }
+        /* New Record */
+        #goNewRecord {
+            text-align: center; margin: 10px 0;
+            animation: goNewRecordIn 0.6s cubic-bezier(0.175,0.885,0.32,1.275) both;
+            animation-delay: 1.2s;
+        }
+        @keyframes goNewRecordIn {
+            from { transform: scale(0) rotate(-10deg); opacity: 0; }
+            to { transform: scale(1) rotate(0); opacity: 1; }
+        }
+        #goNewRecordTitle {
+            font-size: 26px; font-weight: 900; margin-bottom: 14px;
+            animation: nrFlash 0.6s ease-in-out infinite;
+        }
+        @keyframes nrFlash {
+            0%, 100% { color: #FFD700; text-shadow: 0 0 10px #FFD700, 0 0 30px #FF8800; }
+            50% { color: #fff; text-shadow: 0 0 20px #FFD700, 0 0 50px #FF8800, 0 0 80px #FF4400; }
+        }
+        #goNameRow { display: flex; gap: 8px; justify-content: center; margin-bottom: 6px; }
+        .name-slot { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .name-arr {
+            background: none; border: none; color: rgba(255,255,255,0.5);
+            font-size: 18px; cursor: pointer; padding: 2px 10px; line-height: 1;
+            pointer-events: all;
+        }
+        .name-arr:hover { color: #FFD700; }
+        .name-arr:active { transform: scale(0.85); }
+        .name-char {
+            width: 48px; height: 54px; display: flex; align-items: center; justify-content: center;
+            font-size: 34px; font-weight: 900; font-family: 'Courier New', monospace;
+            color: #FFD700; background: rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,215,0,0.25); border-radius: 8px;
+            text-shadow: 0 0 8px rgba(255,215,0,0.5);
+        }
+        .name-char.active {
+            border-color: #FFD700; background: rgba(255,215,0,0.1);
+            animation: ncBlink 0.5s step-end infinite;
+        }
+        @keyframes ncBlink { 50% { border-color: transparent; } }
+        #goNameHint { color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 4px; text-align: center; }
+        .btn-name-ok {
+            margin-top: 10px; padding: 8px 36px; font-size: 18px; font-weight: bold;
+            background: linear-gradient(180deg, #FFB800, #E08900);
+            box-shadow: 0 4px 0 #AA6600; border: none; border-radius: 30px;
+            color: #fff; cursor: pointer; pointer-events: all;
+        }
+        .btn-name-ok:active { transform: translateY(2px); box-shadow: 0 2px 0 #AA6600; }
+        /* Rankings */
+        #goRanking {
+            width: 100%; margin-top: 14px;
+            animation: goRankIn 0.4s ease-out both;
+        }
+        @keyframes goRankIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        #rankTitle {
+            text-align: center; font-size: 18px; font-weight: 900;
+            color: #FFD700; letter-spacing: 4px; margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255,215,0,0.3);
+        }
+        .rank-row {
+            display: flex; padding: 7px 14px; border-radius: 6px;
+            margin-bottom: 2px; font-size: 14px; font-weight: bold; align-items: center;
+        }
+        .rank-row.header {
+            color: rgba(255,255,255,0.35); font-size: 10px;
+            letter-spacing: 1px; margin-bottom: 4px; padding-bottom: 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .rank-row.current {
+            background: rgba(255,215,0,0.12);
+            animation: rkHL 1s ease-in-out infinite;
+            border: 1px solid rgba(255,215,0,0.25);
+        }
+        @keyframes rkHL { 50% { background: rgba(255,215,0,0.22); } }
+        .rank-pos {
+            width: 36px; font-family: 'Courier New', monospace; color: #888;
+        }
+        .rank-row:nth-child(2) .rank-pos { color: #FFD700; }
+        .rank-row:nth-child(3) .rank-pos { color: #C0C0C0; }
+        .rank-row:nth-child(4) .rank-pos { color: #CD7F32; }
+        .rank-name { flex: 1; color: #fff; font-family: 'Courier New', monospace; letter-spacing: 3px; }
+        .rank-score { width: 70px; text-align: right; color: #FFD700; }
+        .rank-you { color: #00DDFF; font-size: 10px; margin-left: 6px; white-space: nowrap; }
+        .go-phase.hidden { display: none; }
+
+        /* Score Popup */
+        .score-popup {
+            position: absolute; color: #FFD700; font-size: 28px; font-weight: bold;
+            pointer-events: none; z-index: 15;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            animation: popUp 0.6s ease-out forwards;
+        }
+        @keyframes popUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-60px) scale(1.4); opacity: 0; }
+        }
+        .score-popup.bomb { color: #FF2222; font-size: 34px; text-shadow: 2px 2px 6px rgba(255,0,0,0.8); }
+
+        /* Screen flash */
+        #flashOverlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: red; opacity: 0; pointer-events: none; z-index: 8;
+            transition: opacity 0.1s;
+        }
+
+        /* Boost Gauge */
+        #boostGauge {
+            position: absolute; right: 20px; bottom: 30px;
+            width: 38px; height: 180px;
+            background: rgba(0,0,0,0.5); border-radius: 19px;
+            border: 2px solid rgba(255,255,255,0.3);
+            padding: 4px; display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-end;
+            overflow: hidden;
+        }
+        #boostFill {
+            width: 100%; border-radius: 15px;
+            background: linear-gradient(0deg, #0066FF, #00CCFF);
+            transition: height 0.1s linear;
+        }
+        #boostGauge.active #boostFill {
+            background: linear-gradient(0deg, #FF6600, #FFCC00);
+            box-shadow: 0 0 14px rgba(255,150,0,0.9);
+        }
+        #boostGauge.empty { opacity: 0.4; }
+        #boostLabel {
+            position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+            color: #fff; font-size: 10px; font-weight: bold; white-space: nowrap;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        #boostIcon {
+            position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+            color: #FFD700; font-size: 18px;
+        }
+
+        /* Boost Screen Overlay */
+        #boostOverlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 7; opacity: 0;
+            transition: opacity 0.2s;
+            background: radial-gradient(ellipse at center, transparent 30%, rgba(0,120,255,0.15) 100%);
+        }
+
+        /* Mobile Boost Button */
+        #boostBtn {
+            position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+            width: 74px; height: 74px; border-radius: 50%;
+            background: linear-gradient(180deg, #0088FF, #0055CC);
+            border: 3px solid rgba(255,255,255,0.5);
+            color: #fff; font-weight: bold; font-size: 11px; letter-spacing: 1px;
+            cursor: pointer; pointer-events: all;
+            box-shadow: 0 4px 12px rgba(0,100,255,0.5);
+            display: none;
+        }
+        #boostBtn:active, #boostBtn.pressed {
+            background: linear-gradient(180deg, #FF8800, #FF5500);
+            box-shadow: 0 2px 20px rgba(255,100,0,0.7);
+            transform: translateX(-50%) scale(0.93);
+        }
+        @media (hover: none) and (pointer: coarse) {
+            #boostBtn { display: block; }
+        }
+
+        /* Boss Warning */
+        #bossWarning {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: clamp(48px, 12vw, 96px); font-weight: 900; color: #FF0000;
+            text-shadow: 0 0 20px rgba(255,0,0,0.8), 0 0 60px rgba(255,0,0,0.4), 3px 3px 0 #880000;
+            letter-spacing: 12px; pointer-events: none; z-index: 12;
+            display: none;
+            animation: bossWarnPulse 0.5s ease-in-out infinite;
+        }
+        @keyframes bossWarnPulse {
+            0%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        /* Boss HP Bar */
+        #bossHPBar {
+            position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+            width: min(320px, 70vw); pointer-events: none; z-index: 6;
+            display: none;
+        }
+        #bossHPName {
+            text-align: center; color: #FF4444; font-size: 13px; font-weight: 900;
+            letter-spacing: 3px; margin-bottom: 4px;
+            text-shadow: 0 0 8px rgba(255,0,0,0.5);
+        }
+        #bossHPTrack {
+            width: 100%; height: 16px; background: rgba(0,0,0,0.6);
+            border-radius: 8px; border: 2px solid rgba(255,100,100,0.5);
+            overflow: hidden; position: relative;
+        }
+        #bossHPFill {
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, #FF0000, #FF4400, #FF0000);
+            border-radius: 6px; transition: width 0.3s ease-out;
+        }
+        #bossHPLabel {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 10px; font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        /* Boss damage popup */
+        .boss-dmg-popup {
+            position: absolute; color: #FF4444; font-size: 32px; font-weight: 900;
+            pointer-events: none; z-index: 15;
+            text-shadow: 2px 2px 6px rgba(255,0,0,0.8), 0 0 12px rgba(255,0,0,0.5);
+            animation: bossDmgPop 0.8s ease-out forwards;
+        }
+        @keyframes bossDmgPop {
+            0% { transform: translateY(0) scale(1.5); opacity: 1; }
+            100% { transform: translateY(-80px) scale(0.8); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Start Screen -->
+    <div id="startScreen" class="overlay active">
+        <h1>고고드라이브</h1>
+        <h2>GoGo Drive!</h2>
+        <button class="btn btn-start" id="btnStart">게임 시작</button>
+        <div class="controls-hint">
+            ← → 방향키 또는 A/D 로 조작<br>
+            ↑ 또는 W 점프 | SPACE 부스터<br>
+            모바일: 좌/우 스와이프 | 위로 스와이프 점프
+        </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+        <div id="scoreBox">
+            <span id="scoreLabel">Score</span>
+            <span id="scoreValue">0</span>
+        </div>
+        <div id="speedIndicator"></div>
+        <div id="boostGauge">
+            <span id="boostLabel">BOOST [SPACE]</span>
+            <div id="boostFill" style="height:100%"></div>
+            <span id="boostIcon">🔥</span>
+        </div>
+        <button id="boostBtn">BOOST</button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameoverScreen" class="overlay hidden">
+        <div id="goContainer">
+            <div id="goTitle">GAME OVER</div>
+            <div id="goStats">
+                <div class="go-stat"><div class="go-stat-label">SCORE</div><div class="go-stat-value" id="goScore">0</div></div>
+                <div class="go-stat"><div class="go-stat-label">DISTANCE</div><div class="go-stat-value" id="goDistance">0</div></div>
+                <div class="go-stat"><div class="go-stat-label">COINS</div><div class="go-stat-value" id="goCoins">0</div></div>
+            </div>
+            <div id="goNewRecord" class="go-phase hidden">
+                <div id="goNewRecordTitle">&#9733; NEW RECORD &#9733;</div>
+                <div id="goNameRow">
+                    <div class="name-slot">
+                        <button class="name-arr" onclick="nameCharChange(0,1)">&#9650;</button>
+                        <div class="name-char active" id="nc0">A</div>
+                        <button class="name-arr" onclick="nameCharChange(0,-1)">&#9660;</button>
+                    </div>
+                    <div class="name-slot">
+                        <button class="name-arr" onclick="nameCharChange(1,1)">&#9650;</button>
+                        <div class="name-char" id="nc1">A</div>
+                        <button class="name-arr" onclick="nameCharChange(1,-1)">&#9660;</button>
+                    </div>
+                    <div class="name-slot">
+                        <button class="name-arr" onclick="nameCharChange(2,1)">&#9650;</button>
+                        <div class="name-char" id="nc2">A</div>
+                        <button class="name-arr" onclick="nameCharChange(2,-1)">&#9660;</button>
+                    </div>
+                </div>
+                <div id="goNameHint">&#8593;&#8595; 변경 &nbsp; &#8592;&#8594; 이동 &nbsp; ENTER 확인</div>
+                <button class="btn-name-ok" onclick="confirmName()">OK</button>
+            </div>
+            <div id="goRanking" class="go-phase hidden">
+                <div id="rankTitle">&#127942; RANKING &#127942;</div>
+                <div id="rankList"></div>
+            </div>
+            <button class="btn btn-restart go-phase hidden" id="btnRestart">다시 하기</button>
+        </div>
+    </div>
+
+    <!-- Flash Overlay -->
+    <div id="flashOverlay"></div>
+    <div id="boostOverlay"></div>
+
+    <!-- Boss UI -->
+    <div id="bossWarning">WARNING</div>
+    <div id="bossHPBar">
+        <div id="bossHPName">BOSS LV.1</div>
+        <div id="bossHPTrack">
+            <div id="bossHPFill"></div>
+            <div id="bossHPLabel">30 / 30</div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+    // ==========================================
+    // CONSTANTS
+    // ==========================================
+    const LANE_POSITIONS = [-3.5, 0, 3.5];
+    const INITIAL_SPEED = 35;
+    const MAX_SPEED = 90;
+    const SPEED_INCREASE = 0.8;
+    const ROAD_SEGMENT_LENGTH = 15;
+    const NUM_ROAD_SEGMENTS = 28;
+    const SPAWN_DISTANCE = -280;
+    const DESPAWN_DISTANCE = 25;
+    const COIN_VALUE = 10;
+    const COIN_SPAWN_DIST = 25;
+    const OBSTACLE_SPAWN_DIST_MIN = 40;
+    const OBSTACLE_SPAWN_DIST_MAX = 80;
+    const CAR_COLORS = [0xff69b4, 0x4488ff, 0xff4444, 0x44cc44, 0xff8800, 0xaa44ff, 0x00cccc];
+
+    // Boost
+    const BOOST_MAX_FUEL = 100;
+    const BOOST_DRAIN_RATE = 28;
+    const BOOST_RECHARGE_RATE = 12;
+    const BOOST_SPEED_MULT = 1.85;
+    const BOOST_FOV = 80;
+    const NORMAL_FOV = 65;
+
+    // Bomb
+    const BOMB_CHANCE = 0.10;
+    const BOMB_PENALTY = 100;
+
+    // Jump
+    const JUMP_VELOCITY = 14;
+    const JUMP_GRAVITY = 30;
+    const JUMP_INVINCIBLE_HEIGHT = 1.5;
+
+    // Crash animation
+    const CRASH_DURATION = 2.0;
+
+    const BUILDING_COLORS = [0xFFCC00, 0xFF5555, 0x5599FF, 0xFF8800, 0xAA44FF, 0x44CC88, 0xFF69B4, 0x88DDFF, 0xFFAAAA, 0xAAFF88];
+
+    // Boss
+    const BOSS_TRIGGER_DISTANCE = 1000;
+    const BOSS_WARNING_DISTANCE = 100;
+    const BOSS_SPAWN_Z = -200;
+    const BOSS_FIGHT_Z = -50;
+    const BOSS_BASE_HP = 30;
+    const BOSS_HP_SCALE = 25;
+    const BOSS_LANE_SWITCH_INTERVAL = 2.0;
+    const BOSS_HIT_COOLDOWN = 1.0;
+    const BOSS_BOUNCE_VEL_Z = 15;
+    const BOSS_BOUNCE_VEL_Y = 6;
+
+    // ==========================================
+    // STATE
+    // ==========================================
+    let scene, camera, renderer, clock;
+    let playerCar, exhaustParticles = [], jumpShadow;
+    let gameState = 'menu'; // menu, playing, gameover
+    let score = 0, bestScore = 0;
+    let speed = INITIAL_SPEED;
+    let currentLane = 1;
+    let targetX = 0, tiltAngle = 0;
+    let distanceTraveled = 0;
+    let nextCoinDist = 10, nextObstacleDist = 50, nextGateDist = 100;
+    let boostFuel = BOOST_MAX_FUEL, boostActive = false;
+    let coinsCollected = 0;
+
+    // Ranking / Name entry
+    const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let rankings = [];
+    let gameOverPhase = ''; // 'stats','nameEntry','ranking'
+    let nameChars = [0, 0, 0];
+    let namePos = 0;
+    let newRankIdx = -1;
+    let crashTimer = 0;
+    let crashVel = { x: 0, y: 0, z: 0 };
+    let crashRot = { x: 0, y: 0, z: 0 };
+
+    const roadChunks = [];
+    const coins = [];
+    const obstacles = [];
+    const sceneryLeft = [];
+    const sceneryRight = [];
+    const gates = [];
+    const explosionParticles = [];
+    const scatterCoins = [];
+    let bombJumpVel = 0;
+    let isJumping = false;
+
+    // Boss state
+    let bossActive = false;
+    let bossPhase = 'none'; // none, warning, approaching, fighting, defeated
+    let bossMesh = null;
+    let bossHP = 0, bossMaxHP = 0, bossLevel = 0;
+    let bossCurrentLane = 1, bossTargetX = 0;
+    let bossLaneSwitchTimer = 0;
+    let bossHitCooldown = 0;
+    let bossDefeatTimer = 0;
+    let nextBossDist = BOSS_TRIGGER_DISTANCE;
+    let bossBounceVel = { y: 0, z: 0 };
+    let bossWarningTimer = 0;
+
+    let audioCtx = null;
+    let touchStartX = 0, touchStartY = 0;
+
+    // DOM
+    const startScreen = document.getElementById('startScreen');
+    const gameoverScreen = document.getElementById('gameoverScreen');
+    const hud = document.getElementById('hud');
+    const scoreValueEl = document.getElementById('scoreValue');
+    const speedIndicator = document.getElementById('speedIndicator');
+    const flashOverlay = document.getElementById('flashOverlay');
+    const boostOverlay = document.getElementById('boostOverlay');
+    const boostFillEl = document.getElementById('boostFill');
+    const boostGaugeEl = document.getElementById('boostGauge');
+    const bossWarningEl = document.getElementById('bossWarning');
+    const bossHPBarEl = document.getElementById('bossHPBar');
+    const bossHPFillEl = document.getElementById('bossHPFill');
+    const bossHPNameEl = document.getElementById('bossHPName');
+    const bossHPLabelEl = document.getElementById('bossHPLabel');
+
+    // Load rankings
+    function loadRankings() {
+        try { rankings = JSON.parse(localStorage.getItem('gogodrive_rankings') || '[]'); } catch(e) { rankings = []; }
+        bestScore = rankings.length > 0 ? rankings[0].score : 0;
+    }
+    function saveRankings() {
+        try { localStorage.setItem('gogodrive_rankings', JSON.stringify(rankings)); } catch(e) {}
+        bestScore = rankings.length > 0 ? rankings[0].score : 0;
+    }
+    function getRankPosition(s) {
+        for (let i = 0; i < rankings.length; i++) { if (s > rankings[i].score) return i; }
+        return rankings.length < 10 ? rankings.length : -1;
+    }
+    loadRankings();
+
+    // ==========================================
+    // THREE.JS SETUP
+    // ==========================================
+    function setupScene() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+        scene.fog = new THREE.Fog(0x87CEEB, 60, 250);
+
+        camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 500);
+        camera.position.set(0, 7, 13);
+        camera.lookAt(0, 1, -20);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = false;
+        document.body.insertBefore(renderer.domElement, document.body.firstChild);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 15, 10);
+        scene.add(dirLight);
+
+        const hemiLight = new THREE.HemisphereLight(0x87CEEB, 0x556B2F, 0.4);
+        scene.add(hemiLight);
+
+        clock = new THREE.Clock();
+
+        // Clouds
+        createClouds();
+    }
+
+    function createClouds() {
+        const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+        for (let i = 0; i < 15; i++) {
+            const cloud = new THREE.Group();
+            const numPuffs = 3 + Math.floor(Math.random() * 4);
+            for (let j = 0; j < numPuffs; j++) {
+                const puff = new THREE.Mesh(
+                    new THREE.SphereGeometry(3 + Math.random() * 4, 8, 6),
+                    cloudMat
+                );
+                puff.position.set(j * 3.5 - numPuffs, Math.random() * 2, Math.random() * 2);
+                puff.scale.y = 0.5 + Math.random() * 0.3;
+                cloud.add(puff);
+            }
+            cloud.position.set(
+                (Math.random() - 0.5) * 200,
+                35 + Math.random() * 20,
+                -50 - Math.random() * 200
+            );
+            scene.add(cloud);
+        }
+    }
+
+    // ==========================================
+    // CAR BUILDER
+    // ==========================================
+    function createCarModel(bodyColor, isPlayer = false) {
+        const car = new THREE.Group();
+        const bodyMat = new THREE.MeshPhongMaterial({ color: bodyColor, shininess: 100 });
+        const darkMat = new THREE.MeshPhongMaterial({ color: 0x222222, shininess: 30 });
+        const glassMat = new THREE.MeshPhongMaterial({ color: 0x334455, shininess: 200, transparent: true, opacity: 0.6 });
+        const chromeMat = new THREE.MeshPhongMaterial({ color: 0xcccccc, shininess: 200 });
+
+        // Main body
+        const body = new THREE.Mesh(new THREE.BoxGeometry(2, 0.65, 4.5), bodyMat);
+        body.position.y = 0.55;
+        car.add(body);
+
+        // Lower body / skirt
+        const skirt = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.25, 4.6), darkMat);
+        skirt.position.y = 0.2;
+        car.add(skirt);
+
+        // Cabin
+        const cabinGeo = new THREE.BoxGeometry(1.7, 0.55, 2);
+        const cabin = new THREE.Mesh(cabinGeo, bodyMat);
+        cabin.position.set(0, 1.15, -0.2);
+        car.add(cabin);
+
+        // Windshield (front)
+        const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.5, 0.08), glassMat);
+        windshield.position.set(0, 1.1, -1.15);
+        windshield.rotation.x = 0.25;
+        car.add(windshield);
+
+        // Rear window
+        const rearWindow = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.45, 0.08), glassMat);
+        rearWindow.position.set(0, 1.1, 0.75);
+        rearWindow.rotation.x = -0.2;
+        car.add(rearWindow);
+
+        // Side windows
+        [-0.88, 0.88].forEach(x => {
+            const sideWin = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.38, 1.6), glassMat);
+            sideWin.position.set(x, 1.12, -0.2);
+            car.add(sideWin);
+        });
+
+        // Hood
+        const hood = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.12, 1.6), bodyMat);
+        hood.position.set(0, 0.9, -1.3);
+        car.add(hood);
+
+        // Trunk
+        const trunk = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.1, 0.8), bodyMat);
+        trunk.position.set(0, 0.88, 1.4);
+        car.add(trunk);
+
+        // Front bumper
+        const fBumper = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.35, 0.3), chromeMat);
+        fBumper.position.set(0, 0.4, -2.2);
+        car.add(fBumper);
+
+        // Rear bumper
+        const rBumper = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.35, 0.25), chromeMat);
+        rBumper.position.set(0, 0.4, 2.15);
+        car.add(rBumper);
+
+        // Headlights
+        const headlightMat = new THREE.MeshPhongMaterial({ color: 0xffffcc, emissive: 0xffffaa, emissiveIntensity: 0.5 });
+        [-0.7, 0.7].forEach(x => {
+            const hl = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.18, 0.1), headlightMat);
+            hl.position.set(x, 0.6, -2.3);
+            car.add(hl);
+        });
+
+        // Taillights
+        const taillightMat = new THREE.MeshPhongMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.6 });
+        [-0.7, 0.7].forEach(x => {
+            const tl = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.1), taillightMat);
+            tl.position.set(x, 0.6, 2.25);
+            car.add(tl);
+        });
+
+        // Wheels
+        const wheelGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.25, 12);
+        const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+        const rimGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.26, 8);
+        const rimMat = new THREE.MeshPhongMaterial({ color: 0xaaaaaa, shininess: 150 });
+
+        [[-1.05, 0.32, 1.3], [1.05, 0.32, 1.3], [-1.05, 0.32, -1.3], [1.05, 0.32, -1.3]].forEach(pos => {
+            const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(...pos);
+            car.add(wheel);
+            const rim = new THREE.Mesh(rimGeo, rimMat);
+            rim.rotation.z = Math.PI / 2;
+            rim.position.set(...pos);
+            car.add(rim);
+        });
+
+        // Spoiler (player only)
+        if (isPlayer) {
+            const spoilerBase = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.1), darkMat);
+            [-0.5, 0.5].forEach(x => {
+                const sb = spoilerBase.clone();
+                sb.position.set(x, 1.2, 1.8);
+                car.add(sb);
+            });
+            const spoilerWing = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.06, 0.4), bodyMat);
+            spoilerWing.position.set(0, 1.48, 1.8);
+            car.add(spoilerWing);
+        }
+
+        // Shadow blob
+        const shadowGeo = new THREE.PlaneGeometry(2.5, 5);
+        const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
+        const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+        shadow.rotation.x = -Math.PI / 2;
+        shadow.position.y = 0.02;
+        car.add(shadow);
+
+        return car;
+    }
+
+    function createPlayerCar() {
+        playerCar = createCarModel(0xFFCC00, true);
+        playerCar.position.set(0, 0, 0);
+        scene.add(playerCar);
+
+        // Jump shadow (shown on ground when airborne)
+        jumpShadow = new THREE.Mesh(
+            new THREE.PlaneGeometry(3.5, 5),
+            new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0 })
+        );
+        jumpShadow.rotation.x = -Math.PI / 2;
+        jumpShadow.position.set(0, 0.02, 0);
+        scene.add(jumpShadow);
+
+        // Exhaust particles
+        const exhaustColors = [0xFF4400, 0xFF6600, 0xFFAA00, 0xFFCC00, 0xFF8800, 0xFFDD22];
+        for (let i = 0; i < 8; i++) {
+            const p = new THREE.Mesh(
+                new THREE.SphereGeometry(0.12, 4, 4),
+                new THREE.MeshBasicMaterial({
+                    color: exhaustColors[i % exhaustColors.length],
+                    transparent: true, opacity: 0.8
+                })
+            );
+            p.position.set((Math.random() - 0.5) * 1.0, 0.15, 2.6);
+            playerCar.add(p);
+            exhaustParticles.push(p);
+        }
+    }
+
+    // ==========================================
+    // ROAD SYSTEM
+    // ==========================================
+    function createRoad() {
+        const roadMat = new THREE.MeshLambertMaterial({ color: 0x555555 });
+        const grassMat = new THREE.MeshLambertMaterial({ color: 0x44AA22 });
+        const markingMat = new THREE.MeshBasicMaterial({ color: 0xFFDD00 });
+        const edgeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const curbRedMat = new THREE.MeshLambertMaterial({ color: 0xDD2222 });
+        const curbWhiteMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+
+        for (let i = 0; i < NUM_ROAD_SEGMENTS; i++) {
+            const chunk = new THREE.Group();
+            const segLen = ROAD_SEGMENT_LENGTH;
+
+            // Road surface
+            const road = new THREE.Mesh(new THREE.PlaneGeometry(11, segLen), roadMat);
+            road.rotation.x = -Math.PI / 2;
+            road.position.y = 0.01;
+            chunk.add(road);
+
+            // Lane markings (dashes)
+            [-3.5, 0, 3.5].forEach((laneCenter, idx) => {
+                if (idx === 0 || idx === 2) return; // only center marking
+            });
+            [-1.75, 1.75].forEach(x => {
+                for (let d = 0; d < segLen; d += 3) {
+                    const dash = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.02, 1.2), markingMat);
+                    dash.position.set(x, 0.02, -segLen / 2 + d + 0.6);
+                    chunk.add(dash);
+                }
+            });
+
+            // Edge lines
+            [-5.3, 5.3].forEach(x => {
+                const edge = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.03, segLen), edgeMat);
+                edge.position.set(x, 0.02, 0);
+                chunk.add(edge);
+            });
+
+            // Curbs (alternating red/white)
+            [-5.8, 5.8].forEach(xSide => {
+                for (let d = 0; d < segLen; d += 1.2) {
+                    const isRed = Math.floor(d / 1.2) % 2 === 0;
+                    const curb = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.7, 0.18, 1.2),
+                        isRed ? curbRedMat : curbWhiteMat
+                    );
+                    curb.position.set(xSide, 0.09, -segLen / 2 + d + 0.6);
+                    chunk.add(curb);
+                }
+            });
+
+            // Grass
+            [-13, 13].forEach(x => {
+                const grass = new THREE.Mesh(new THREE.PlaneGeometry(14, segLen), grassMat);
+                grass.rotation.x = -Math.PI / 2;
+                grass.position.set(x, 0.005, 0);
+                chunk.add(grass);
+            });
+
+            chunk.position.z = -i * segLen;
+            scene.add(chunk);
+            roadChunks.push(chunk);
+        }
+    }
+
+    // ==========================================
+    // SCENERY
+    // ==========================================
+    function createBuilding(x, z) {
+        const building = new THREE.Group();
+        const w = 3 + Math.random() * 5;
+        const h = 4 + Math.random() * 10;
+        const d = 3 + Math.random() * 5;
+        const color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+
+        // Main structure
+        const body = new THREE.Mesh(
+            new THREE.BoxGeometry(w, h, d),
+            new THREE.MeshPhongMaterial({ color: color })
+        );
+        body.position.y = h / 2;
+        building.add(body);
+
+        // Roof
+        const roofColor = new THREE.Color(color).multiplyScalar(0.8);
+        const roof = new THREE.Mesh(
+            new THREE.BoxGeometry(w + 0.4, 0.5, d + 0.4),
+            new THREE.MeshPhongMaterial({ color: roofColor })
+        );
+        roof.position.y = h + 0.25;
+        building.add(roof);
+
+        // Windows
+        const winMat = new THREE.MeshPhongMaterial({ color: 0x88CCFF, emissive: 0x224466, emissiveIntensity: 0.2 });
+        const winSize = 0.6;
+        const cols = Math.floor(w / 1.8);
+        const rows = Math.floor(h / 2);
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const win = new THREE.Mesh(new THREE.BoxGeometry(winSize, winSize * 1.2, 0.1), winMat);
+                const wx = -w / 2 + 1.2 + c * 1.8;
+                const wy = 1.5 + r * 2;
+                const side = x > 0 ? -1 : 1;
+                win.position.set(wx, wy, side * (d / 2 + 0.05));
+                building.add(win);
+            }
+        }
+
+        // Door (facing road)
+        const doorMat = new THREE.MeshPhongMaterial({ color: 0x553311 });
+        const door = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 0.1), doorMat);
+        const doorSide = x > 0 ? -1 : 1;
+        door.position.set(0, 1, doorSide * (d / 2 + 0.05));
+        building.add(door);
+
+        building.position.set(x, 0, z);
+        return building;
+    }
+
+    function createFenceSegment(x, z, length) {
+        const fence = new THREE.Group();
+        const postMat = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+        const railMat = new THREE.MeshPhongMaterial({ color: 0xA0522D });
+
+        const numPosts = Math.ceil(length / 3);
+        for (let i = 0; i <= numPosts; i++) {
+            const post = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.2, 0.15), postMat);
+            post.position.set(0, 0.6, -length / 2 + i * 3);
+            fence.add(post);
+        }
+        // Rails
+        [0.4, 0.9].forEach(y => {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, length), railMat);
+            rail.position.set(0, y, 0);
+            fence.add(rail);
+        });
+
+        fence.position.set(x, 0, z);
+        return fence;
+    }
+
+    function createBalloon(x, z) {
+        const group = new THREE.Group();
+        const color = [0xFF0000, 0x00CC00, 0x0066FF, 0xFFCC00, 0xFF69B4, 0xFF8800][Math.floor(Math.random() * 6)];
+        const balloon = new THREE.Mesh(
+            new THREE.SphereGeometry(0.5, 8, 8),
+            new THREE.MeshPhongMaterial({ color: color, shininess: 80 })
+        );
+        balloon.position.y = 3.5 + Math.random() * 2;
+        balloon.scale.y = 1.3;
+        group.add(balloon);
+
+        const string = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.02, 0.02, balloon.position.y - 1, 4),
+            new THREE.MeshBasicMaterial({ color: 0x888888 })
+        );
+        string.position.y = (balloon.position.y - 1) / 2 + 1;
+        group.add(string);
+
+        group.position.set(x, 0, z);
+        return group;
+    }
+
+    function createScenery() {
+        const totalLength = NUM_ROAD_SEGMENTS * ROAD_SEGMENT_LENGTH;
+        // Buildings on both sides
+        for (let z = 0; z > -totalLength; z -= 18 + Math.random() * 12) {
+            const offsetL = -10 - Math.random() * 8;
+            const offsetR = 10 + Math.random() * 8;
+            const bldgL = createBuilding(offsetL, z);
+            scene.add(bldgL);
+            sceneryLeft.push(bldgL);
+            const bldgR = createBuilding(offsetR, z);
+            scene.add(bldgR);
+            sceneryRight.push(bldgR);
+        }
+
+        // Fences
+        for (let z = 0; z > -totalLength; z -= ROAD_SEGMENT_LENGTH) {
+            const fenceL = createFenceSegment(-6.8, z, ROAD_SEGMENT_LENGTH);
+            scene.add(fenceL);
+            sceneryLeft.push(fenceL);
+            const fenceR = createFenceSegment(6.8, z, ROAD_SEGMENT_LENGTH);
+            scene.add(fenceR);
+            sceneryRight.push(fenceR);
+        }
+
+        // Balloons scattered
+        for (let i = 0; i < 30; i++) {
+            const side = Math.random() > 0.5 ? 1 : -1;
+            const x = side * (7 + Math.random() * 10);
+            const z = -Math.random() * totalLength;
+            const b = createBalloon(x, z);
+            scene.add(b);
+            if (side < 0) sceneryLeft.push(b); else sceneryRight.push(b);
+        }
+    }
+
+    function createGateArch(z) {
+        const gate = new THREE.Group();
+        const pillarMat = new THREE.MeshPhongMaterial({ color: 0x44BB44 });
+        const archMat = new THREE.MeshPhongMaterial({ color: 0xFFAA00 });
+        const decoMat = new THREE.MeshPhongMaterial({ color: 0xFF4444 });
+
+        // Pillars
+        [-6.2, 6.2].forEach(x => {
+            const pillar = new THREE.Mesh(new THREE.BoxGeometry(1, 9, 1), pillarMat);
+            pillar.position.set(x, 4.5, 0);
+            gate.add(pillar);
+
+            // Pillar top deco
+            const top = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 8), decoMat);
+            top.position.set(x, 9.2, 0);
+            gate.add(top);
+        });
+
+        // Arch beam
+        const arch = new THREE.Mesh(new THREE.BoxGeometry(13.4, 1.5, 1), archMat);
+        arch.position.set(0, 9.5, 0);
+        gate.add(arch);
+
+        // Banner text area
+        const bannerMat = new THREE.MeshPhongMaterial({ color: 0xFFDD00 });
+        const banner = new THREE.Mesh(new THREE.BoxGeometry(8, 1.8, 0.3), bannerMat);
+        banner.position.set(0, 9.5, 0.6);
+        gate.add(banner);
+
+        // Checkered flag decorations on top
+        for (let x = -5; x <= 5; x += 2.5) {
+            const flag = new THREE.Mesh(
+                new THREE.BoxGeometry(0.8, 1, 0.1),
+                new THREE.MeshPhongMaterial({ color: Math.random() > 0.5 ? 0xffffff : 0x111111 })
+            );
+            flag.position.set(x, 10.8, 0);
+            gate.add(flag);
+        }
+
+        // Decorative balls along the arch
+        for (let x = -5; x <= 5; x += 1.5) {
+            const ball = new THREE.Mesh(
+                new THREE.SphereGeometry(0.35, 8, 8),
+                new THREE.MeshPhongMaterial({ color: BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)] })
+            );
+            ball.position.set(x, 8.5, 0.5);
+            gate.add(ball);
+        }
+
+        gate.position.z = z;
+        scene.add(gate);
+        gates.push(gate);
+        return gate;
+    }
+
+    // ==========================================
+    // BOSS MODEL
+    // ==========================================
+    function createBossModel() {
+        const boss = new THREE.Group();
+        const bodyMat = new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 120 });
+        const accentMat = new THREE.MeshPhongMaterial({ color: 0xCC0000, shininess: 100 });
+        const darkMat = new THREE.MeshPhongMaterial({ color: 0x0a0a0a, shininess: 30 });
+        const chromeMat = new THREE.MeshPhongMaterial({ color: 0xcccccc, shininess: 200 });
+        const glassMat = new THREE.MeshPhongMaterial({ color: 0x112233, shininess: 200, transparent: true, opacity: 0.5 });
+
+        // Main body (1.75x scale of normal car)
+        const body = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.1, 7.8), bodyMat);
+        body.position.y = 1.2;
+        boss.add(body);
+
+        // Lower body / skirt
+        const skirt = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.4, 8.0), darkMat);
+        skirt.position.y = 0.6;
+        boss.add(skirt);
+
+        // Red accent stripes
+        const stripe1 = new THREE.Mesh(new THREE.BoxGeometry(3.52, 0.15, 7.82), accentMat);
+        stripe1.position.y = 1.0;
+        boss.add(stripe1);
+
+        // Cabin
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.9, 3.5), bodyMat);
+        cabin.position.set(0, 2.2, -0.3);
+        boss.add(cabin);
+
+        // Windshield
+        const windshield = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.8, 0.1), glassMat);
+        windshield.position.set(0, 2.1, -2.0);
+        windshield.rotation.x = 0.25;
+        boss.add(windshield);
+
+        // Rear window
+        const rearWin = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.7, 0.1), glassMat);
+        rearWin.position.set(0, 2.1, 1.4);
+        rearWin.rotation.x = -0.2;
+        boss.add(rearWin);
+
+        // Chrome bumper bar (front)
+        const fBumper = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.6, 0.5), chromeMat);
+        fBumper.position.set(0, 0.7, -3.9);
+        boss.add(fBumper);
+
+        // Chrome bumper bar (rear)
+        const rBumper = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.6, 0.4), chromeMat);
+        rBumper.position.set(0, 0.7, 3.8);
+        boss.add(rBumper);
+
+        // Bull bar (front grille guard)
+        const bullBar = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.8, 0.15), chromeMat);
+        bullBar.position.set(0, 1.0, -4.1);
+        boss.add(bullBar);
+        const bullBarV1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.2, 0.15), chromeMat);
+        bullBarV1.position.set(-1.0, 1.0, -4.1);
+        boss.add(bullBarV1);
+        const bullBarV2 = bullBarV1.clone();
+        bullBarV2.position.x = 1.0;
+        boss.add(bullBarV2);
+
+        // Large wheels (monster truck style)
+        const wheelGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.45, 14);
+        const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+        const rimGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.46, 10);
+        const rimMat = new THREE.MeshPhongMaterial({ color: 0xCC0000, shininess: 150 });
+        [[-1.8, 0.6, 2.3], [1.8, 0.6, 2.3], [-1.8, 0.6, -2.3], [1.8, 0.6, -2.3]].forEach(pos => {
+            const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(...pos);
+            boss.add(wheel);
+            const rim = new THREE.Mesh(rimGeo, rimMat);
+            rim.rotation.z = Math.PI / 2;
+            rim.position.set(...pos);
+            boss.add(rim);
+        });
+
+        // Roof warning lights (red glow)
+        const lightMat = new THREE.MeshPhongMaterial({ color: 0xFF0000, emissive: 0xFF0000, emissiveIntensity: 0.8 });
+        const lightBar = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.2, 0.6), darkMat);
+        lightBar.position.set(0, 2.85, -0.3);
+        boss.add(lightBar);
+        [-0.6, 0, 0.6].forEach(x => {
+            const light = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), lightMat);
+            light.position.set(x, 3.0, -0.3);
+            boss.add(light);
+        });
+
+        // Exhaust stacks
+        const exhaustMat = new THREE.MeshPhongMaterial({ color: 0x444444, shininess: 80 });
+        [-1.2, 1.2].forEach(x => {
+            const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, 1.2, 8), exhaustMat);
+            stack.position.set(x, 2.5, 1.0);
+            boss.add(stack);
+            const stackTop = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.15, 0.15, 8), chromeMat);
+            stackTop.position.set(x, 3.15, 1.0);
+            boss.add(stackTop);
+        });
+
+        // Angry headlights (red tint)
+        const headMat = new THREE.MeshPhongMaterial({ color: 0xFF4444, emissive: 0xFF2200, emissiveIntensity: 0.6 });
+        [-1.2, 1.2].forEach(x => {
+            const hl = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.25, 0.1), headMat);
+            hl.position.set(x, 1.2, -4.0);
+            boss.add(hl);
+        });
+
+        // Shadow
+        const shadowGeo = new THREE.PlaneGeometry(4.5, 9);
+        const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 });
+        const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+        shadow.rotation.x = -Math.PI / 2;
+        shadow.position.y = 0.02;
+        boss.add(shadow);
+
+        return boss;
+    }
+
+    // ==========================================
+    // COINS
+    // ==========================================
+    function createCoin(x, z) {
+        const coin = new THREE.Group();
+        const coinMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.55, 0.55, 0.15, 16),
+            new THREE.MeshPhongMaterial({ color: 0xFFD700, shininess: 150, emissive: 0x886600, emissiveIntensity: 0.3 })
+        );
+        coinMesh.rotation.z = Math.PI / 2;
+        coin.add(coinMesh);
+
+        // Inner circle detail
+        const inner = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.35, 0.35, 0.16, 12),
+            new THREE.MeshPhongMaterial({ color: 0xFFAA00, shininess: 100 })
+        );
+        inner.rotation.z = Math.PI / 2;
+        coin.add(inner);
+
+        coin.position.set(x, 1.2, z);
+        coin.userData = { baseY: 1.2, time: Math.random() * Math.PI * 2 };
+        scene.add(coin);
+        coins.push(coin);
+    }
+
+    function createBomb(x, z) {
+        const bomb = new THREE.Group();
+
+        // Body - dark sphere
+        const body = new THREE.Mesh(
+            new THREE.SphereGeometry(0.5, 12, 12),
+            new THREE.MeshPhongMaterial({ color: 0x222222, shininess: 80 })
+        );
+        bomb.add(body);
+
+        // Fuse stem
+        const fuse = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.06, 0.06, 0.4, 6),
+            new THREE.MeshPhongMaterial({ color: 0x886644 })
+        );
+        fuse.position.y = 0.6;
+        bomb.add(fuse);
+
+        // Spark at fuse tip
+        const spark = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1, 4, 4),
+            new THREE.MeshBasicMaterial({ color: 0xFF4400, transparent: true, opacity: 0.9 })
+        );
+        spark.position.y = 0.85;
+        bomb.add(spark);
+
+        // Warning glow
+        const glow = new THREE.Mesh(
+            new THREE.SphereGeometry(0.7, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xFF0000, transparent: true, opacity: 0.12 })
+        );
+        bomb.add(glow);
+
+        bomb.position.set(x, 1.2, z);
+        bomb.userData = { isBomb: true, baseY: 1.2, time: Math.random() * Math.PI * 2 };
+        scene.add(bomb);
+        coins.push(bomb);
+    }
+
+    function createExplosion(x, y, z) {
+        // Flash sphere
+        const flash = new THREE.Mesh(
+            new THREE.SphereGeometry(0.5, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xFFAA00, transparent: true, opacity: 0.9 })
+        );
+        flash.position.set(x, y, z);
+        flash.userData = { vx: 0, vy: 0, vz: 0, life: 0.35, isFlash: true };
+        scene.add(flash);
+        explosionParticles.push(flash);
+
+        // Debris
+        for (let i = 0; i < 18; i++) {
+            const p = new THREE.Mesh(
+                new THREE.BoxGeometry(0.18, 0.18, 0.18),
+                new THREE.MeshBasicMaterial({
+                    color: [0xFF4400, 0xFF6600, 0xFFAA00, 0xFF0000, 0x222222][Math.floor(Math.random() * 5)],
+                    transparent: true, opacity: 1
+                })
+            );
+            p.position.set(x, y, z);
+            p.userData = {
+                vx: (Math.random() - 0.5) * 14,
+                vy: 2 + Math.random() * 10,
+                vz: (Math.random() - 0.5) * 14,
+                life: 0.5 + Math.random() * 0.5,
+                isFlash: false
+            };
+            scene.add(p);
+            explosionParticles.push(p);
+        }
+    }
+
+    function createCoinScatter(fromX, fromY, fromZ, count) {
+        const coinGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.12, 12);
+        const coinMat = new THREE.MeshPhongMaterial({
+            color: 0xFFD700, shininess: 150, emissive: 0x886600, emissiveIntensity: 0.3,
+            transparent: true, opacity: 1
+        });
+        for (let i = 0; i < count; i++) {
+            const coin = new THREE.Mesh(coinGeo, coinMat.clone());
+            coin.position.set(fromX, fromY, fromZ);
+
+            // Sonic-style ring scatter: radial pattern outward + upward
+            const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+            const hSpeed = 5 + Math.random() * 9;
+            coin.userData = {
+                vx: Math.cos(angle) * hSpeed,
+                vy: 6 + Math.random() * 7,
+                vz: Math.sin(angle) * hSpeed,
+                life: 1.5 + Math.random() * 0.5,
+                rotSpeed: 8 + Math.random() * 10,
+                bounces: 0
+            };
+            scene.add(coin);
+            scatterCoins.push(coin);
+        }
+    }
+
+    function spawnCoinGroup() {
+        const pattern = Math.floor(Math.random() * 3);
+        const startLane = Math.floor(Math.random() * 3);
+        const numCoins = 4 + Math.floor(Math.random() * 4);
+
+        for (let i = 0; i < numCoins; i++) {
+            let lane = startLane;
+            if (pattern === 1) { // diagonal
+                lane = Math.min(2, Math.max(0, startLane + Math.floor(i / 2) - 1));
+            } else if (pattern === 2) { // zigzag
+                lane = startLane + (i % 2 === 0 ? 0 : (startLane < 2 ? 1 : -1));
+                lane = Math.min(2, Math.max(0, lane));
+            }
+            if (Math.random() < BOMB_CHANCE) {
+                createBomb(LANE_POSITIONS[lane], SPAWN_DISTANCE - i * 4);
+            } else {
+                createCoin(LANE_POSITIONS[lane], SPAWN_DISTANCE - i * 4);
+            }
+        }
+    }
+
+    // ==========================================
+    // OBSTACLES
+    // ==========================================
+    function spawnObstacle() {
+        const lane = Math.floor(Math.random() * 3);
+        const color = CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)];
+        const obsCar = createCarModel(color, false);
+        obsCar.position.set(LANE_POSITIONS[lane], 0, SPAWN_DISTANCE);
+        scene.add(obsCar);
+        obstacles.push(obsCar);
+    }
+
+    // ==========================================
+    // AUDIO
+    // ==========================================
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playSound(type) {
+        if (!audioCtx) return;
+        try {
+            const now = audioCtx.currentTime;
+            if (type === 'coin') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, now);
+                osc.frequency.linearRampToValueAtTime(1320, now + 0.08);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.12);
+                osc.start(now);
+                osc.stop(now + 0.12);
+            } else if (type === 'crash') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.linearRampToValueAtTime(40, now + 0.4);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+
+                // Noise burst
+                const bufferSize = audioCtx.sampleRate * 0.3;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+                const noise = audioCtx.createBufferSource();
+                const noiseGain = audioCtx.createGain();
+                noise.buffer = buffer;
+                noise.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noiseGain.gain.setValueAtTime(0.2, now);
+                noiseGain.gain.linearRampToValueAtTime(0, now + 0.3);
+                noise.start(now);
+            } else if (type === 'bomb') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.linearRampToValueAtTime(25, now + 0.5);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+                const bufferSize = audioCtx.sampleRate * 0.5;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let k = 0; k < bufferSize; k++) data[k] = (Math.random() * 2 - 1) * Math.pow(1 - k / bufferSize, 2);
+                const noise = audioCtx.createBufferSource();
+                const noiseGain = audioCtx.createGain();
+                noise.buffer = buffer;
+                noise.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noiseGain.gain.setValueAtTime(0.25, now);
+                noiseGain.gain.linearRampToValueAtTime(0, now + 0.5);
+                noise.start(now);
+            } else if (type === 'boost') {
+                // Layer 1: Low rumble base
+                const osc1 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc1.type = 'sawtooth';
+                osc1.frequency.setValueAtTime(60, now);
+                osc1.frequency.exponentialRampToValueAtTime(120, now + 0.15);
+                osc1.frequency.exponentialRampToValueAtTime(180, now + 0.6);
+                osc1.frequency.exponentialRampToValueAtTime(140, now + 0.9);
+                gain1.gain.setValueAtTime(0, now);
+                gain1.gain.linearRampToValueAtTime(0.13, now + 0.08);
+                gain1.gain.setValueAtTime(0.13, now + 0.5);
+                gain1.gain.linearRampToValueAtTime(0, now + 0.9);
+                osc1.start(now);
+                osc1.stop(now + 0.9);
+
+                // Layer 2: Mid roar sweep
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.type = 'sawtooth';
+                osc2.frequency.setValueAtTime(100, now);
+                osc2.frequency.exponentialRampToValueAtTime(300, now + 0.2);
+                osc2.frequency.exponentialRampToValueAtTime(400, now + 0.6);
+                osc2.frequency.exponentialRampToValueAtTime(250, now + 0.9);
+                gain2.gain.setValueAtTime(0, now);
+                gain2.gain.linearRampToValueAtTime(0.10, now + 0.1);
+                gain2.gain.setValueAtTime(0.10, now + 0.5);
+                gain2.gain.linearRampToValueAtTime(0, now + 0.9);
+                osc2.start(now);
+                osc2.stop(now + 0.9);
+
+                // Layer 3: Vibrato LFO for roaring wobble
+                const lfo = audioCtx.createOscillator();
+                const lfoGain = audioCtx.createGain();
+                lfo.type = 'sine';
+                lfo.frequency.setValueAtTime(18, now);
+                lfo.frequency.linearRampToValueAtTime(12, now + 0.9);
+                lfoGain.gain.setValueAtTime(20, now);
+                lfo.connect(lfoGain);
+                lfoGain.connect(osc1.frequency);
+                lfoGain.connect(osc2.frequency);
+                lfo.start(now);
+                lfo.stop(now + 0.9);
+
+                // Layer 4: Whoosh noise
+                const bufSize = audioCtx.sampleRate * 0.7;
+                const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+                const d = buf.getChannelData(0);
+                for (let i = 0; i < bufSize; i++) {
+                    const t = i / bufSize;
+                    const env = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85;
+                    d[i] = (Math.random() * 2 - 1) * env * 0.5;
+                }
+                const noiseSrc = audioCtx.createBufferSource();
+                const noiseGain = audioCtx.createGain();
+                noiseSrc.buffer = buf;
+                noiseSrc.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noiseGain.gain.setValueAtTime(0.09, now);
+                noiseSrc.start(now);
+            } else if (type === 'boostEnd') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'bossWarning') {
+                // Low siren sound
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(80, now);
+                osc.frequency.linearRampToValueAtTime(120, now + 0.3);
+                osc.frequency.linearRampToValueAtTime(80, now + 0.6);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.linearRampToValueAtTime(0.12, now + 0.3);
+                gain.gain.linearRampToValueAtTime(0, now + 0.6);
+                osc.start(now);
+                osc.stop(now + 0.6);
+            } else if (type === 'bossHit') {
+                // Metal impact
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.linearRampToValueAtTime(60, now + 0.25);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+                // Noise burst
+                const bufferSize = audioCtx.sampleRate * 0.2;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+                const noise = audioCtx.createBufferSource();
+                const noiseGain = audioCtx.createGain();
+                noise.buffer = buffer;
+                noise.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noiseGain.gain.setValueAtTime(0.2, now);
+                noiseGain.gain.linearRampToValueAtTime(0, now + 0.2);
+                noise.start(now);
+            } else if (type === 'bossDefeat') {
+                // Victory chord (major triad)
+                [523.25, 659.25, 783.99].forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.15, now + idx * 0.1 + 0.05);
+                    gain.gain.setValueAtTime(0.15, now + 0.6);
+                    gain.gain.linearRampToValueAtTime(0, now + 1.2);
+                    osc.start(now + idx * 0.1);
+                    osc.stop(now + 1.2);
+                });
+            } else if (type === 'jump') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(350, now);
+                osc.frequency.exponentialRampToValueAtTime(700, now + 0.15);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'lane') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                gain.gain.setValueAtTime(0.06, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            }
+        } catch (e) {}
+    }
+
+    // ==========================================
+    // INPUT
+    // ==========================================
+    function setupInput() {
+        document.addEventListener('keydown', (e) => {
+            if (gameState !== 'playing') return;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                changeLane(-1);
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                changeLane(1);
+            } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+                e.preventDefault();
+                performJump();
+            } else if (e.key === ' ') {
+                e.preventDefault();
+                if (!boostActive && boostFuel > 5) activateBoost();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === ' ') {
+                deactivateBoost();
+            }
+        });
+
+        // Mobile boost button
+        const boostBtnEl = document.getElementById('boostBtn');
+        boostBtnEl.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'playing' && !boostActive && boostFuel > 5) activateBoost();
+        }, { passive: false });
+        boostBtnEl.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            deactivateBoost();
+        }, { passive: false });
+
+        // Touch controls
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            if (gameState !== 'playing') return;
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
+                changeLane(dx > 0 ? 1 : -1);
+            } else if (dy < -40 && Math.abs(dy) > Math.abs(dx)) {
+                performJump();
+            }
+        }, { passive: true });
+    }
+
+    function changeLane(dir) {
+        const newLane = currentLane + dir;
+        if (newLane < 0 || newLane > 2) return;
+        currentLane = newLane;
+        targetX = LANE_POSITIONS[currentLane];
+        playSound('lane');
+    }
+
+    function activateBoost() {
+        if (boostActive || boostFuel <= 5) return;
+        boostActive = true;
+        playSound('boost');
+        boostOverlay.style.opacity = '1';
+        boostGaugeEl.classList.add('active');
+    }
+
+    function deactivateBoost() {
+        if (!boostActive) return;
+        boostActive = false;
+        playSound('boostEnd');
+        boostOverlay.style.opacity = '0';
+        boostGaugeEl.classList.remove('active');
+    }
+
+    function performJump() {
+        if (isJumping || playerCar.position.y > 0.1) return;
+        isJumping = true;
+        bombJumpVel = JUMP_VELOCITY;
+        playSound('jump');
+    }
+
+    // ==========================================
+    // COLLISION DETECTION
+    // ==========================================
+    function checkCollisions() {
+        if (gameState !== 'playing') return;
+        const px = playerCar.position.x;
+        const pz = playerCar.position.z;
+
+        // Coins & Bombs
+        for (let i = coins.length - 1; i >= 0; i--) {
+            const coin = coins[i];
+            const dx = Math.abs(coin.position.x - px);
+            const dz = Math.abs(coin.position.z - pz);
+            if (dx < 1.5 && dz < 1.8) {
+                if (coin.userData.isBomb) {
+                    // Bomb hit! Sonic-style coin scatter
+                    const lostCoins = Math.min(Math.floor(score / COIN_VALUE), 10);
+                    score = Math.max(0, score - BOMB_PENALTY);
+                    updateScoreUI();
+                    showScorePopup(coin, -BOMB_PENALTY);
+                    playSound('bomb');
+                    createExplosion(coin.position.x, coin.position.y, coin.position.z);
+                    // Scatter coins from the player (Sonic ring loss)
+                    if (lostCoins > 0) {
+                        createCoinScatter(px, 1.5, pz, lostCoins);
+                    }
+                    // Car jumps from bomb blast
+                    bombJumpVel = 12;
+                    flashOverlay.style.background = '#FF4400';
+                    flashOverlay.style.opacity = '0.35';
+                    setTimeout(() => { flashOverlay.style.opacity = '0'; flashOverlay.style.background = 'red'; }, 250);
+                } else {
+                    // Coin collected
+                    coinsCollected++;
+                    const pts = boostActive ? COIN_VALUE * 2 : COIN_VALUE;
+                    score += pts;
+                    updateScoreUI();
+                    showScorePopup(coin, pts);
+                    playSound('coin');
+                }
+                scene.remove(coin);
+                coins.splice(i, 1);
+            }
+        }
+
+        // Obstacles → crash animation (disabled during boss fight, skip if jumping high)
+        if (!bossActive && playerCar.position.y < JUMP_INVINCIBLE_HEIGHT) {
+            for (let i = 0; i < obstacles.length; i++) {
+                const obs = obstacles[i];
+                const dx = Math.abs(obs.position.x - px);
+                const dz = Math.abs(obs.position.z - pz);
+                if (dx < 1.8 && dz < 3.5) {
+                    startCrash(obs);
+                    return;
+                }
+            }
+        }
+    }
+
+    // ==========================================
+    // UI
+    // ==========================================
+    function updateScoreUI() {
+        scoreValueEl.textContent = score;
+        scoreValueEl.classList.add('flash');
+        setTimeout(() => scoreValueEl.classList.remove('flash'), 100);
+    }
+
+    function showScorePopup(obj, points) {
+        const vec = new THREE.Vector3();
+        obj.getWorldPosition(vec);
+        vec.project(camera);
+        const x = (vec.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-vec.y * 0.5 + 0.5) * window.innerHeight;
+
+        const popup = document.createElement('div');
+        popup.className = 'score-popup';
+        if (points < 0) {
+            popup.textContent = points;
+            popup.classList.add('bomb');
+        } else {
+            popup.textContent = '+' + points;
+            if (points > COIN_VALUE) popup.style.color = '#00DDFF';
+        }
+        popup.style.left = x + 'px';
+        popup.style.top = y + 'px';
+        document.body.appendChild(popup);
+        setTimeout(() => popup.remove(), 600);
+    }
+
+    // ==========================================
+    // BOSS SYSTEM
+    // ==========================================
+    function checkBossTrigger() {
+        if (bossActive || bossPhase !== 'none') return;
+        const distToNext = nextBossDist - distanceTraveled;
+
+        if (distToNext <= 0) {
+            // Overshot warning zone — spawn immediately
+            spawnBoss();
+        } else if (distToNext <= BOSS_WARNING_DISTANCE) {
+            bossPhase = 'warning';
+            bossWarningTimer = 0;
+            bossWarningEl.style.display = 'block';
+            playSound('bossWarning');
+        }
+    }
+
+    function spawnBoss() {
+        bossLevel++;
+        bossMaxHP = BOSS_BASE_HP + (bossLevel - 1) * BOSS_HP_SCALE;
+        bossHP = bossMaxHP;
+        bossActive = true;
+        bossPhase = 'approaching';
+        bossCurrentLane = 1;
+        bossTargetX = LANE_POSITIONS[bossCurrentLane];
+        bossLaneSwitchTimer = BOSS_LANE_SWITCH_INTERVAL;
+        bossHitCooldown = 0;
+        bossDefeatTimer = 0;
+
+        // Remove existing obstacles
+        obstacles.forEach(o => scene.remove(o));
+        obstacles.length = 0;
+
+        // Create boss mesh
+        bossMesh = createBossModel();
+        bossMesh.position.set(LANE_POSITIONS[bossCurrentLane], 0, BOSS_SPAWN_Z);
+        scene.add(bossMesh);
+
+        // Show HP bar
+        bossHPNameEl.textContent = 'BOSS LV.' + bossLevel;
+        bossHPBarEl.style.display = 'block';
+        updateBossHPBar();
+
+        // Hide warning
+        bossWarningEl.style.display = 'none';
+    }
+
+    function updateBossHPBar() {
+        const pct = Math.max(0, bossHP / bossMaxHP * 100);
+        bossHPFillEl.style.width = pct + '%';
+        bossHPLabelEl.textContent = Math.max(0, bossHP) + ' / ' + bossMaxHP;
+    }
+
+    function updateBoss(delta, moveDist) {
+        if (bossPhase === 'warning') {
+            bossWarningTimer += delta;
+            // Pulse warning sound
+            if (bossWarningTimer > 0.6) {
+                bossWarningTimer = 0;
+                playSound('bossWarning');
+            }
+            // Check if we reached boss distance
+            if (distanceTraveled >= nextBossDist) {
+                spawnBoss();
+            }
+            return;
+        }
+
+        if (!bossMesh) return;
+        bossHitCooldown = Math.max(0, bossHitCooldown - delta);
+
+        if (bossPhase === 'approaching') {
+            // Boss moves from far to fight position
+            bossMesh.position.z += moveDist; // move with road
+            const targetZ = BOSS_FIGHT_Z;
+            bossMesh.position.z += (targetZ - bossMesh.position.z) * 0.03;
+            if (Math.abs(bossMesh.position.z - targetZ) < 2) {
+                bossMesh.position.z = targetZ;
+                bossPhase = 'fighting';
+            }
+            // Smooth X transition
+            bossMesh.position.x += (bossTargetX - bossMesh.position.x) * 0.1;
+            return;
+        }
+
+        if (bossPhase === 'fighting') {
+            // Keep boss at fixed distance from player (moves with road)
+            bossMesh.position.z += moveDist;
+            bossMesh.position.z += (BOSS_FIGHT_Z - bossMesh.position.z) * 0.05;
+
+            // Lane switching AI
+            bossLaneSwitchTimer -= delta;
+            if (bossLaneSwitchTimer <= 0) {
+                bossLaneSwitchTimer = BOSS_LANE_SWITCH_INTERVAL * (0.7 + Math.random() * 0.6);
+                if (Math.random() < 0.6) {
+                    // Track player
+                    bossCurrentLane = currentLane;
+                } else {
+                    // Random lane
+                    bossCurrentLane = Math.floor(Math.random() * 3);
+                }
+                bossTargetX = LANE_POSITIONS[bossCurrentLane];
+            }
+            bossMesh.position.x += (bossTargetX - bossMesh.position.x) * 0.08;
+
+            // Pulse warning lights
+            const pulseVal = Math.sin(clock.elapsedTime * 8) * 0.5 + 0.5;
+            bossMesh.children.forEach(child => {
+                if (child.material && child.material.emissive &&
+                    child.material.emissiveIntensity > 0.5 && child.material.color.r > 0.9) {
+                    child.material.emissiveIntensity = 0.4 + pulseVal * 0.6;
+                }
+            });
+
+            // Check collision
+            checkBossCollision();
+            return;
+        }
+
+        if (bossPhase === 'defeated') {
+            bossDefeatTimer -= delta;
+            // Keep boss moving with road so it doesn't drift into player
+            bossMesh.position.z += moveDist;
+            // Explosion and sinking
+            bossMesh.position.y -= 3 * delta;
+            bossMesh.rotation.x += 1.5 * delta;
+            bossMesh.rotation.z += 2 * delta;
+
+            // Spawn explosion particles periodically
+            if (Math.random() < 0.3) {
+                createExplosion(
+                    bossMesh.position.x + (Math.random() - 0.5) * 3,
+                    bossMesh.position.y + 1 + Math.random() * 2,
+                    bossMesh.position.z + (Math.random() - 0.5) * 4
+                );
+            }
+
+            if (bossDefeatTimer <= 0) {
+                finishBossDefeat();
+            }
+            return;
+        }
+    }
+
+    function checkBossCollision() {
+        if (!bossMesh || bossPhase !== 'fighting' || bossHitCooldown > 0) return;
+        const px = playerCar.position.x;
+        const pz = playerCar.position.z;
+        const bx = bossMesh.position.x;
+        const bz = bossMesh.position.z;
+
+        const dx = Math.abs(bx - px);
+        const dz = Math.abs(bz - pz);
+
+        if (dx < 2.5 && dz < 5.0) {
+            bossHitCooldown = BOSS_HIT_COOLDOWN;
+            const damage = coinsCollected;
+
+            if (damage > 0) {
+                bossHP -= damage;
+                updateBossHPBar();
+                showBossDamagePopup(damage);
+                playSound('bossHit');
+
+                // Flash boss red
+                flashOverlay.style.background = '#FF4400';
+                flashOverlay.style.opacity = '0.2';
+                setTimeout(() => { flashOverlay.style.opacity = '0'; flashOverlay.style.background = 'red'; }, 150);
+
+                if (bossHP <= 0) {
+                    startBossDefeat();
+                    return;
+                }
+            } else {
+                // No coins = no damage, just bounce
+                playSound('bossHit');
+            }
+
+            // Bounce player back
+            triggerBossBounce();
+        }
+    }
+
+    function triggerBossBounce() {
+        bossBounceVel.z = BOSS_BOUNCE_VEL_Z;
+        bossBounceVel.y = BOSS_BOUNCE_VEL_Y;
+        // Reduce speed temporarily
+        speed = Math.max(INITIAL_SPEED, speed * 0.6);
+        deactivateBoost();
+    }
+
+    function startBossDefeat() {
+        bossPhase = 'defeated';
+        bossDefeatTimer = 2.0;
+        playSound('bossDefeat');
+
+        // Big explosion
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                if (bossMesh) {
+                    createExplosion(
+                        bossMesh.position.x + (Math.random() - 0.5) * 4,
+                        1 + Math.random() * 3,
+                        bossMesh.position.z + (Math.random() - 0.5) * 6
+                    );
+                }
+            }, i * 200);
+        }
+
+        // Flash screen
+        flashOverlay.style.background = '#FFAA00';
+        flashOverlay.style.opacity = '0.4';
+        setTimeout(() => { flashOverlay.style.opacity = '0'; flashOverlay.style.background = 'red'; }, 500);
+    }
+
+    function finishBossDefeat() {
+        if (bossMesh) {
+            scene.remove(bossMesh);
+            bossMesh = null;
+        }
+        bossActive = false;
+        bossPhase = 'none';
+        bossHPBarEl.style.display = 'none';
+        nextBossDist = distanceTraveled + BOSS_TRIGGER_DISTANCE;
+        // Reset obstacle spawn distance to prevent immediate burst
+        nextObstacleDist = OBSTACLE_SPAWN_DIST_MAX;
+    }
+
+    function showBossDamagePopup(damage) {
+        if (!bossMesh) return;
+        const vec = new THREE.Vector3();
+        bossMesh.getWorldPosition(vec);
+        vec.y += 3;
+        vec.project(camera);
+        const x = (vec.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-vec.y * 0.5 + 0.5) * window.innerHeight;
+
+        const popup = document.createElement('div');
+        popup.className = 'boss-dmg-popup';
+        popup.textContent = '-' + damage + ' HP';
+        popup.style.left = x + 'px';
+        popup.style.top = y + 'px';
+        document.body.appendChild(popup);
+        setTimeout(() => popup.remove(), 800);
+    }
+
+    function resetBossState() {
+        if (bossMesh) {
+            scene.remove(bossMesh);
+            bossMesh = null;
+        }
+        bossActive = false;
+        bossPhase = 'none';
+        bossHP = 0;
+        bossMaxHP = 0;
+        bossLevel = 0;
+        bossCurrentLane = 1;
+        bossTargetX = 0;
+        bossLaneSwitchTimer = 0;
+        bossHitCooldown = 0;
+        bossDefeatTimer = 0;
+        nextBossDist = BOSS_TRIGGER_DISTANCE;
+        bossBounceVel = { y: 0, z: 0 };
+        bossWarningTimer = 0;
+        bossWarningEl.style.display = 'none';
+        bossHPBarEl.style.display = 'none';
+    }
+
+    // ==========================================
+    // GAME STATE
+    // ==========================================
+    function startGame() {
+        initAudio();
+        gameState = 'playing';
+        score = 0;
+        speed = INITIAL_SPEED;
+        currentLane = 1;
+        targetX = 0;
+        distanceTraveled = 0;
+        nextCoinDist = 10;
+        nextObstacleDist = 50;
+        nextGateDist = 80;
+        coinsCollected = 0;
+
+        // Clear boss
+        resetBossState();
+
+        // Clear existing objects
+        coins.forEach(c => scene.remove(c));
+        coins.length = 0;
+        obstacles.forEach(o => scene.remove(o));
+        obstacles.length = 0;
+        gates.forEach(g => scene.remove(g));
+        gates.length = 0;
+
+        playerCar.position.set(0, 0, 0);
+        playerCar.rotation.set(0, 0, 0);
+
+        // Reset crash
+        crashTimer = 0;
+        crashVel = { x: 0, y: 0, z: 0 };
+        crashRot = { x: 0, y: 0, z: 0 };
+        exhaustParticles.forEach(p => p.visible = true);
+        explosionParticles.forEach(p => scene.remove(p));
+        explosionParticles.length = 0;
+        scatterCoins.forEach(c => scene.remove(c));
+        scatterCoins.length = 0;
+        bombJumpVel = 0;
+        isJumping = false;
+
+        // Reset camera
+        camera.position.set(0, 7, 13);
+        camera.lookAt(0, 1, -20);
+
+        // Reset boost
+        boostFuel = BOOST_MAX_FUEL;
+        boostActive = false;
+        boostOverlay.style.opacity = '0';
+        boostGaugeEl.classList.remove('active');
+        boostGaugeEl.classList.remove('empty');
+        boostFillEl.style.height = '100%';
+        camera.fov = NORMAL_FOV;
+        camera.updateProjectionMatrix();
+
+        scoreValueEl.textContent = '0';
+        startScreen.classList.add('hidden');
+        startScreen.classList.remove('active');
+        gameoverScreen.classList.add('hidden');
+        gameoverScreen.classList.remove('active');
+        hud.classList.remove('hidden');
+
+        clock.getDelta(); // reset delta
+    }
+
+    function startCrash(hitObstacle) {
+        gameState = 'crashing';
+        deactivateBoost();
+        playSound('crash');
+
+        crashTimer = CRASH_DURATION;
+
+        // Launch car away from obstacle
+        const dx = playerCar.position.x - hitObstacle.position.x;
+        crashVel.x = dx * 4 + (Math.random() - 0.5) * 3;
+        crashVel.y = 10 + Math.random() * 5;
+        crashVel.z = 3 + Math.random() * 3;
+
+        crashRot.x = (Math.random() - 0.5) * 8;
+        crashRot.y = (Math.random() - 0.5) * 5;
+        crashRot.z = (Math.random() - 0.5) * 10;
+
+        // Explosion at impact point
+        createExplosion(
+            (playerCar.position.x + hitObstacle.position.x) / 2,
+            1,
+            (playerCar.position.z + hitObstacle.position.z) / 2
+        );
+
+        // Hide exhaust
+        exhaustParticles.forEach(p => p.visible = false);
+
+        // Flash red
+        flashOverlay.style.opacity = '0.5';
+        setTimeout(() => flashOverlay.style.opacity = '0', 400);
+    }
+
+    function animateValue(el, target, suffix, duration) {
+        const start = performance.now();
+        (function tick(now) {
+            const t = Math.min(1, (now - start) / duration);
+            const v = Math.floor(target * (1 - Math.pow(1 - t, 3)));
+            el.textContent = v.toLocaleString() + (suffix || '');
+            if (t < 1) requestAnimationFrame(tick);
+        })(performance.now());
+    }
+
+    function finishGameOver() {
+        gameState = 'gameover';
+        gameOverPhase = 'stats';
+        newRankIdx = score > 0 ? getRankPosition(score) : -1;
+
+        // Reset sub-screens
+        document.getElementById('goNewRecord').classList.add('hidden');
+        document.getElementById('goRanking').classList.add('hidden');
+        document.getElementById('btnRestart').classList.add('hidden');
+
+        // Show screen
+        gameoverScreen.classList.remove('hidden');
+        gameoverScreen.classList.add('active');
+
+        // Animate stats
+        const dist = Math.floor(distanceTraveled);
+        animateValue(document.getElementById('goScore'), score, '', 1200);
+        animateValue(document.getElementById('goDistance'), dist, 'm', 1200);
+        animateValue(document.getElementById('goCoins'), coinsCollected, '', 1000);
+
+        // After stats animation, next phase
+        setTimeout(() => {
+            if (newRankIdx >= 0) {
+                showNameEntry();
+            } else {
+                showRanking();
+            }
+        }, 1800);
+    }
+
+    function showNameEntry() {
+        gameOverPhase = 'nameEntry';
+        nameChars = [0, 0, 0];
+        namePos = 0;
+        const nr = document.getElementById('goNewRecord');
+        nr.classList.remove('hidden');
+        nr.style.animation = 'none'; nr.offsetHeight; nr.style.animation = '';
+        updateNameDisplay();
+    }
+
+    function updateNameDisplay() {
+        for (let i = 0; i < 3; i++) {
+            const el = document.getElementById('nc' + i);
+            el.textContent = ALPHABET[nameChars[i]];
+            el.classList.toggle('active', i === namePos);
+        }
+    }
+
+    // Global functions for onclick buttons
+    window.nameCharChange = function(pos, dir) {
+        if (gameOverPhase !== 'nameEntry') return;
+        namePos = pos;
+        nameChars[pos] = (nameChars[pos] + dir + ALPHABET.length) % ALPHABET.length;
+        updateNameDisplay();
+    };
+
+    window.confirmName = function() {
+        if (gameOverPhase !== 'nameEntry') return;
+        const name = nameChars.map(i => ALPHABET[i]).join('');
+        rankings.splice(newRankIdx, 0, { name, score });
+        if (rankings.length > 10) rankings.length = 10;
+        saveRankings();
+        document.getElementById('goNewRecord').classList.add('hidden');
+        showRanking();
+        playSound('coin');
+    };
+
+    function showRanking() {
+        gameOverPhase = 'ranking';
+        const list = document.getElementById('rankList');
+        const ordinals = ['1ST','2ND','3RD','4TH','5TH','6TH','7TH','8TH','9TH','10TH'];
+
+        let html = '<div class="rank-row header"><span class="rank-pos">RANK</span><span class="rank-name">NAME</span><span class="rank-score">SCORE</span></div>';
+
+        const display = rankings.slice(0, 10);
+        if (display.length === 0) {
+            html += '<div style="text-align:center;color:#666;padding:16px;font-size:13px;">기록 없음</div>';
+        }
+        display.forEach((r, i) => {
+            const isCurrent = (i === newRankIdx && r.score === score);
+            html += '<div class="rank-row' + (isCurrent ? ' current' : '') + '">';
+            html += '<span class="rank-pos">' + ordinals[i] + '</span>';
+            html += '<span class="rank-name">' + r.name + '</span>';
+            html += '<span class="rank-score">' + r.score.toLocaleString() + '</span>';
+            if (isCurrent) html += '<span class="rank-you">&#9664; YOU</span>';
+            html += '</div>';
+        });
+
+        list.innerHTML = html;
+        const rk = document.getElementById('goRanking');
+        rk.classList.remove('hidden');
+        rk.style.animation = 'none'; rk.offsetHeight; rk.style.animation = '';
+        document.getElementById('btnRestart').classList.remove('hidden');
+        newRankIdx = -1;
+    }
+
+    // ==========================================
+    // GAME LOOP
+    // ==========================================
+    function animate() {
+        requestAnimationFrame(animate);
+        const delta = Math.min(clock.getDelta(), 0.05); // cap delta
+
+        if (gameState === 'playing') {
+            update(delta);
+        } else if (gameState === 'crashing') {
+            updateCrash(delta);
+        }
+
+        // Animate coins & bombs rotation
+        const time = clock.elapsedTime;
+        coins.forEach(coin => {
+            if (coin.userData.isBomb) {
+                coin.rotation.y = time * 2;
+                coin.position.y = coin.userData.baseY + Math.sin(time * 3 + coin.userData.time) * 0.15;
+                // Pulse the glow
+                const glow = coin.children[3];
+                if (glow) glow.material.opacity = 0.08 + Math.sin(time * 6) * 0.08;
+            } else {
+                coin.rotation.y = time * 3;
+                coin.position.y = coin.userData.baseY + Math.sin(time * 2 + coin.userData.time) * 0.3;
+            }
+        });
+
+        // Update explosion particles
+        for (let i = explosionParticles.length - 1; i >= 0; i--) {
+            const p = explosionParticles[i];
+            p.userData.life -= delta;
+            if (p.userData.life <= 0) {
+                scene.remove(p);
+                explosionParticles.splice(i, 1);
+                continue;
+            }
+            if (p.userData.isFlash) {
+                const s = 1 + (0.35 - p.userData.life) * 18;
+                p.scale.setScalar(s);
+                p.material.opacity = p.userData.life * 2.5;
+            } else {
+                p.position.x += p.userData.vx * delta;
+                p.position.y += p.userData.vy * delta;
+                p.position.z += p.userData.vz * delta;
+                p.userData.vy -= 18 * delta;
+                p.material.opacity = Math.max(0, p.userData.life * 1.8);
+                p.rotation.x += 6 * delta;
+                p.rotation.z += 4 * delta;
+            }
+        }
+
+        // Update scatter coins (Sonic-style)
+        for (let i = scatterCoins.length - 1; i >= 0; i--) {
+            const c = scatterCoins[i];
+            c.userData.life -= delta;
+            if (c.userData.life <= 0) {
+                scene.remove(c);
+                scatterCoins.splice(i, 1);
+                continue;
+            }
+            c.position.x += c.userData.vx * delta;
+            c.position.y += c.userData.vy * delta;
+            c.position.z += c.userData.vz * delta;
+            c.userData.vy -= 18 * delta; // gravity
+            c.rotation.x += c.userData.rotSpeed * delta;
+            c.rotation.z += c.userData.rotSpeed * 0.6 * delta;
+            // Bounce off ground
+            if (c.position.y < 0.15 && c.userData.bounces < 3) {
+                c.position.y = 0.15;
+                c.userData.vy = Math.abs(c.userData.vy) * 0.45;
+                c.userData.vx *= 0.6;
+                c.userData.vz *= 0.6;
+                c.userData.bounces++;
+            }
+            // Fade out & shrink in last 0.4s
+            if (c.userData.life < 0.4) {
+                const t = c.userData.life / 0.4;
+                c.material.opacity = t;
+                c.scale.setScalar(t);
+            }
+        }
+
+        // Exhaust effect (boosted = bigger, brighter flames)
+        if (gameState === 'playing') {
+            const bMult = boostActive ? 3.0 : 1.0;
+            const bSpread = boostActive ? 1.6 : 1.0;
+            const bLen = boostActive ? 1.5 : 0.6;
+            exhaustParticles.forEach(p => {
+                p.scale.setScalar((0.3 + Math.random() * 1.8) * bMult);
+                p.position.x = (Math.random() - 0.5) * bSpread;
+                p.position.z = 2.5 + Math.random() * bLen;
+                p.position.y = 0.12 + Math.random() * 0.2;
+                p.material.opacity = boostActive ? 0.6 + Math.random() * 0.4 : 0.3 + Math.random() * 0.7;
+                if (boostActive) {
+                    p.material.color.setHex([0x0088FF, 0x00BBFF, 0xFFFFFF, 0xFF6600, 0xFFAA00][Math.floor(Math.random() * 5)]);
+                } else {
+                    p.material.color.setHex([0xFF4400, 0xFF6600, 0xFFAA00, 0xFFCC00][Math.floor(Math.random() * 4)]);
+                }
+            });
+        }
+
+        // Boost FOV animation
+        const targetFOV = (gameState === 'playing' && boostActive) ? BOOST_FOV : NORMAL_FOV;
+        camera.fov += (targetFOV - camera.fov) * 0.08;
+        camera.updateProjectionMatrix();
+
+        renderer.render(scene, camera);
+    }
+
+    function updateCrash(delta) {
+        crashTimer -= delta;
+
+        // Gravity
+        crashVel.y -= 22 * delta;
+
+        // Move car
+        playerCar.position.x += crashVel.x * delta;
+        playerCar.position.y += crashVel.y * delta;
+        playerCar.position.z += crashVel.z * delta;
+
+        // Bounce off ground
+        if (playerCar.position.y < 0 && crashTimer > 0.3) {
+            playerCar.position.y = 0;
+            crashVel.y = Math.abs(crashVel.y) * 0.25;
+            crashVel.x *= 0.6;
+            crashVel.z *= 0.6;
+        } else if (playerCar.position.y < -5) {
+            playerCar.position.y = -5;
+        }
+
+        // Tumble
+        playerCar.rotation.x += crashRot.x * delta;
+        playerCar.rotation.y += crashRot.y * delta;
+        playerCar.rotation.z += crashRot.z * delta;
+
+        // Dampen rotation over time
+        crashRot.x *= 0.995;
+        crashRot.y *= 0.995;
+        crashRot.z *= 0.995;
+
+        // Camera shake (decreasing intensity)
+        const shake = Math.max(0, crashTimer / CRASH_DURATION);
+        camera.position.x = playerCar.position.x * 0.3 + (Math.random() - 0.5) * shake * 0.8;
+        camera.position.y = 7 + Math.max(0, playerCar.position.y * 0.4) + (Math.random() - 0.5) * shake * 0.4;
+        camera.lookAt(
+            playerCar.position.x * 0.3,
+            Math.max(1, 1 + playerCar.position.y * 0.3),
+            -10
+        );
+
+        if (crashTimer <= 0) {
+            finishGameOver();
+        }
+    }
+
+    function update(delta) {
+        // Increase base speed
+        speed = Math.min(MAX_SPEED, speed + SPEED_INCREASE * delta);
+
+        // Boost fuel logic
+        if (boostActive && boostFuel > 0) {
+            boostFuel = Math.max(0, boostFuel - BOOST_DRAIN_RATE * delta);
+            if (boostFuel <= 0) deactivateBoost();
+        } else if (!boostActive) {
+            boostFuel = Math.min(BOOST_MAX_FUEL, boostFuel + BOOST_RECHARGE_RATE * delta);
+        }
+        boostFillEl.style.height = (boostFuel / BOOST_MAX_FUEL * 100) + '%';
+        boostGaugeEl.classList.toggle('empty', boostFuel < 5);
+
+        const effectiveSpeed = boostActive ? speed * BOOST_SPEED_MULT : speed;
+        const moveDist = effectiveSpeed * delta;
+        distanceTraveled += moveDist;
+
+        speedIndicator.textContent = Math.floor(effectiveSpeed * 2) + ' km/h';
+
+        // Distance-based score (1 point per 5 units)
+        // (coins are main score source)
+
+        // Move player to target lane (smooth)
+        playerCar.position.x += (targetX - playerCar.position.x) * 0.12;
+
+        // Jump / Bomb jump physics
+        if (bombJumpVel !== 0 || playerCar.position.y > 0.01) {
+            playerCar.position.y += bombJumpVel * delta;
+            bombJumpVel -= JUMP_GRAVITY * delta;
+            if (playerCar.position.y <= 0) {
+                playerCar.position.y = 0;
+                if (Math.abs(bombJumpVel) > 2) {
+                    bombJumpVel = -bombJumpVel * 0.2; // small bounce
+                } else {
+                    bombJumpVel = 0;
+                    isJumping = false;
+                }
+            }
+            // Tilt car nose up while rising, nose down while falling
+            playerCar.rotation.x = -bombJumpVel * 0.012;
+        } else {
+            playerCar.rotation.x = 0;
+        }
+
+        // Jump shadow
+        if (playerCar.position.y > 0.1) {
+            jumpShadow.position.x = playerCar.position.x;
+            jumpShadow.position.z = playerCar.position.z;
+            jumpShadow.visible = true;
+            const shadowScale = Math.max(0.3, 1 - playerCar.position.y * 0.08);
+            jumpShadow.scale.set(shadowScale, shadowScale, 1);
+            jumpShadow.material.opacity = Math.max(0.05, 0.3 - playerCar.position.y * 0.03);
+        } else {
+            jumpShadow.visible = false;
+        }
+
+        // Boss bounce physics (push player backward + hop)
+        if (bossBounceVel.z !== 0 || bossBounceVel.y !== 0) {
+            // Offset camera and boss to simulate player being pushed back
+            camera.position.z += bossBounceVel.z * delta;
+            if (bossMesh && bossPhase === 'fighting') {
+                bossMesh.position.z -= bossBounceVel.z * delta;
+            }
+            playerCar.position.y += bossBounceVel.y * delta;
+            bossBounceVel.y -= 20 * delta;
+            if (playerCar.position.y <= 0) {
+                playerCar.position.y = 0;
+                bossBounceVel.y = 0;
+            }
+            bossBounceVel.z *= (1 - 3 * delta);
+            if (Math.abs(bossBounceVel.z) < 0.5) bossBounceVel.z = 0;
+            // Smoothly return camera
+            if (bossBounceVel.z === 0) {
+                camera.position.z += (13 - camera.position.z) * 0.1;
+            }
+        }
+
+        // Car tilt when turning
+        const targetTilt = (targetX - playerCar.position.x) * -0.15;
+        tiltAngle += (targetTilt - tiltAngle) * 0.1;
+        playerCar.rotation.z = tiltAngle;
+
+        // Camera follow (subtle)
+        camera.position.x += (playerCar.position.x * 0.35 - camera.position.x) * 0.06;
+
+        // Move road chunks
+        const totalRoadLen = NUM_ROAD_SEGMENTS * ROAD_SEGMENT_LENGTH;
+        roadChunks.forEach(chunk => {
+            chunk.position.z += moveDist;
+            if (chunk.position.z > DESPAWN_DISTANCE) {
+                chunk.position.z -= totalRoadLen;
+            }
+        });
+
+        // Move scenery
+        const moveScenery = (arr) => {
+            arr.forEach(obj => {
+                obj.position.z += moveDist;
+                if (obj.position.z > DESPAWN_DISTANCE + 20) {
+                    obj.position.z -= totalRoadLen;
+                }
+            });
+        };
+        moveScenery(sceneryLeft);
+        moveScenery(sceneryRight);
+
+        // Move gates
+        for (let i = gates.length - 1; i >= 0; i--) {
+            gates[i].position.z += moveDist;
+            if (gates[i].position.z > DESPAWN_DISTANCE + 10) {
+                scene.remove(gates[i]);
+                gates.splice(i, 1);
+            }
+        }
+
+        // Move coins
+        for (let i = coins.length - 1; i >= 0; i--) {
+            coins[i].position.z += moveDist;
+            if (coins[i].position.z > DESPAWN_DISTANCE) {
+                scene.remove(coins[i]);
+                coins.splice(i, 1);
+            }
+        }
+
+        // Move obstacles
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            obstacles[i].position.z += moveDist * 0.7; // obstacles move slightly slower (relative speed)
+            if (obstacles[i].position.z > DESPAWN_DISTANCE) {
+                scene.remove(obstacles[i]);
+                obstacles.splice(i, 1);
+            }
+        }
+
+        // Spawn management
+        nextCoinDist -= moveDist;
+        if (nextCoinDist <= 0) {
+            spawnCoinGroup();
+            nextCoinDist = COIN_SPAWN_DIST + Math.random() * 20;
+        }
+
+        if (!bossActive && bossPhase !== 'warning') {
+            nextObstacleDist -= moveDist;
+            if (nextObstacleDist <= 0) {
+                spawnObstacle();
+                const difficultyFactor = Math.max(0.4, 1 - distanceTraveled / 3000);
+                nextObstacleDist = OBSTACLE_SPAWN_DIST_MIN * difficultyFactor +
+                    Math.random() * (OBSTACLE_SPAWN_DIST_MAX - OBSTACLE_SPAWN_DIST_MIN) * difficultyFactor;
+            }
+        }
+
+        nextGateDist -= moveDist;
+        if (nextGateDist <= 0) {
+            createGateArch(SPAWN_DISTANCE);
+            nextGateDist = 120 + Math.random() * 80;
+        }
+
+        // Boss system
+        checkBossTrigger();
+        if (bossActive || bossPhase === 'warning') {
+            updateBoss(delta, moveDist);
+        }
+
+        // Collisions
+        checkCollisions();
+    }
+
+    // ==========================================
+    // RESIZE
+    // ==========================================
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ==========================================
+    // INIT
+    // ==========================================
+    function init() {
+        setupScene();
+        createRoad();
+        createPlayerCar();
+        createScenery();
+        setupInput();
+
+        // Button events
+        document.getElementById('btnStart').addEventListener('click', startGame);
+        document.getElementById('btnRestart').addEventListener('click', startGame);
+
+        // Global keydown: name entry + start/restart
+        document.addEventListener('keydown', (e) => {
+            // Name entry input
+            if (gameState === 'gameover' && gameOverPhase === 'nameEntry') {
+                if (e.key === 'ArrowUp') { nameCharChange(namePos, 1); }
+                else if (e.key === 'ArrowDown') { nameCharChange(namePos, -1); }
+                else if (e.key === 'ArrowLeft') { namePos = Math.max(0, namePos - 1); updateNameDisplay(); }
+                else if (e.key === 'ArrowRight') { namePos = Math.min(2, namePos + 1); updateNameDisplay(); }
+                else if (e.key === 'Enter') { confirmName(); }
+                e.preventDefault();
+                return;
+            }
+            if (e.key === ' ' || e.key === 'Enter') {
+                if (gameState === 'menu') { startGame(); }
+                else if (gameState === 'gameover' && gameOverPhase === 'ranking') { startGame(); }
+            }
+        });
+
+        animate();
+    }
+
+    init();
+    </script>
+</body>
+</html>

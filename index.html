@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GogoPlayRoom</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- HUD Bar -->
+  <div id="hud">
+    <div class="hud-left">
+      <img src="assets/coin.svg" alt="coin" class="hud-coin-icon">
+      <span id="coin-count">0</span>
+    </div>
+    <div class="hud-center">고고 오락실</div>
+    <div class="hud-right">
+      <button id="add-coin-btn"><span style="position:relative;top:2px">+</span> 동전</button>
+    </div>
+  </div>
+
+  <!-- Three.js Canvas Container -->
+  <div id="three-canvas-container"></div>
+
+  <!-- Password Modal -->
+  <div id="password-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-title">INSERT PASSWORD</div>
+      <div class="modal-subtitle">4-DIGIT PIN</div>
+      <div id="pin-inputs">
+        <input type="password" maxlength="1" class="pin-input" data-index="0" inputmode="numeric">
+        <input type="password" maxlength="1" class="pin-input" data-index="1" inputmode="numeric">
+        <input type="password" maxlength="1" class="pin-input" data-index="2" inputmode="numeric">
+        <input type="password" maxlength="1" class="pin-input" data-index="3" inputmode="numeric">
+      </div>
+      <div id="pin-error" class="hidden">WRONG PASSWORD!</div>
+      <div id="coin-qty">
+        <div class="qty-label">수량</div>
+        <div class="qty-controls">
+          <button id="qty-minus" class="qty-btn">-</button>
+          <span id="qty-value">1</span>
+          <button id="qty-plus" class="qty-btn">+</button>
+        </div>
+      </div>
+      <button id="pin-cancel" class="pixel-btn">CANCEL</button>
+    </div>
+  </div>
+
+  <!-- Game Viewport -->
+  <div id="game-viewport" class="hidden">
+    <div id="game-loading">LOADING...</div>
+    <iframe id="game-iframe" sandbox="allow-scripts allow-same-origin"></iframe>
+    <button id="exit-btn">EXIT</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="arcade-cabinet-3d.js"></script>
+  <script src="arcade.js"></script>
+</body>
+</html>
