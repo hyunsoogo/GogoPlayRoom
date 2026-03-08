@@ -861,7 +861,7 @@ function launchGame(game, cabinet) {
 
   // Load game after zoom animation
   setTimeout(() => {
-    const gamePath = encodeURI(game.path);
+    const gamePath = encodeURI(game.path) + '?t=' + Date.now();
     gameIframe.src = gamePath;
     gameIframe.onload = () => {
       gameLoading.classList.add('hidden');
@@ -877,7 +877,7 @@ function launchGameFullscreen(game) {
   gameLoading.classList.remove('hidden');
   gameIframe.src = '';
   setTimeout(() => {
-    gameIframe.src = encodeURI(game.path);
+    gameIframe.src = encodeURI(game.path) + '?t=' + Date.now();
     gameIframe.onload = () => {
       gameLoading.classList.add('hidden');
       gameIframe.focus();
@@ -999,6 +999,7 @@ qtyPlus.addEventListener('click', () => {
 addCoinBtn.addEventListener('click', () => {
   coinQty = 1;
   qtyValueEl.textContent = coinQty;
+  resetPasswordModalTitle();
   passwordModal.classList.remove('hidden');
   pinError.classList.add('hidden');
   pinInputs.forEach((input) => (input.value = ''));
@@ -1013,6 +1014,13 @@ pinInputs.forEach((input, idx) => {
     if (idx === 3 && input.value.length === 1) {
       const pin = Array.from(pinInputs).map((i) => i.value).join('');
       if (pin === savedPin) {
+        if (changePinMode) {
+          playCoinSound();
+          passwordModal.classList.add('hidden');
+          resetPasswordModalTitle();
+          showSetupModal();
+          return;
+        }
         playCoinSound();
         updateCoins(coins + coinQty);
         passwordModal.classList.add('hidden');
@@ -1036,13 +1044,35 @@ pinInputs.forEach((input, idx) => {
     }
     if (e.key === 'Escape') {
       passwordModal.classList.add('hidden');
+      resetPasswordModalTitle();
     }
   });
 });
 
 pinCancel.addEventListener('click', () => {
   passwordModal.classList.add('hidden');
+  resetPasswordModalTitle();
 });
+
+// ===== Change Password =====
+const pinChangeBtn = document.getElementById('pin-change');
+let changePinMode = false;
+
+pinChangeBtn.addEventListener('click', () => {
+  changePinMode = true;
+  pinError.classList.add('hidden');
+  // Repurpose the modal title to ask for current password
+  passwordModal.querySelector('.modal-title').textContent = '현재 비밀번호 입력';
+  passwordModal.querySelector('.modal-subtitle').textContent = '변경하려면 현재 비밀번호를 입력하세요';
+  pinInputs.forEach((i) => (i.value = ''));
+  pinInputs[0].focus();
+});
+
+function resetPasswordModalTitle() {
+  passwordModal.querySelector('.modal-title').textContent = 'INSERT PASSWORD';
+  passwordModal.querySelector('.modal-subtitle').textContent = '4-DIGIT PIN';
+  changePinMode = false;
+}
 
 // ===== 3D Coin Cursor =====
 const coinCursor = new THREE.Group();

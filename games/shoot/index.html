@@ -1488,8 +1488,22 @@ function updateBoss() {
 
 function updateMetaKnight(b) {
   const spd = b.phase === 2 ? 3.5 : 2.5;
+  const returnSpd = b.phase === 2 ? 4 : 3;
 
-  if (b.state === 'idle') {
+  if (b.state === 'return') {
+    // Fly back to idle area at constant speed
+    const tx = W / 2, ty = b.targetY;
+    const dx = tx - b.x, dy = ty - b.y;
+    const d = Math.hypot(dx, dy);
+    if (d > returnSpd) {
+      b.x += (dx / d) * returnSpd;
+      b.y += (dy / d) * returnSpd;
+    } else {
+      b.x = tx; b.y = ty;
+      b.state = 'idle';
+      b.stateTimer = 60;
+    }
+  } else if (b.state === 'idle') {
     // Float around
     b.x += Math.sin(frame * 0.04) * spd * 0.5;
     b.y = b.targetY + Math.sin(frame * 0.03) * 15;
@@ -1516,7 +1530,6 @@ function updateMetaKnight(b) {
   } else if (b.state === 'swordBeam') {
     b.attackAnim = b.stateTimer;
     if (b.stateTimer === 30) {
-      // Fire sword beams
       const count = b.phase === 2 ? 3 : 2;
       for (let i = 0; i < count; i++) {
         const angle = Math.PI / 2 + (i - (count - 1) / 2) * 0.35;
@@ -1529,7 +1542,7 @@ function updateMetaKnight(b) {
       screenShake(3, 8);
       playTone(400, 0.15, 'sawtooth', 0.08);
     }
-    if (b.stateTimer <= 0) { b.state = 'idle'; b.stateTimer = 70; }
+    if (b.stateTimer <= 0) { b.state = 'return'; }
   } else if (b.state === 'dash') {
     const dx = b.dashTarget.x - b.x;
     const dy = b.dashTarget.y - b.y;
@@ -1540,7 +1553,6 @@ function updateMetaKnight(b) {
       b.y += (dy / d) * dashSpd;
     }
     if (b.stateTimer <= 0 || d <= 5) {
-      // Slash at arrival
       b.attackAnim = 20;
       for (let i = 0; i < (b.phase === 2 ? 5 : 3); i++) {
         const angle = (i / (b.phase === 2 ? 5 : 3)) * Math.PI * 2;
@@ -1552,11 +1564,11 @@ function updateMetaKnight(b) {
       }
       screenShake(4, 10);
       playTone(300, 0.2, 'square', 0.08);
-      b.state = 'idle'; b.stateTimer = 70;
+      b.state = 'return';
     }
   } else if (b.state === 'multiSlash') {
     b.attackAnim = b.stateTimer;
-    b.x += Math.sin(frame * 0.15) * 4;
+    b.x += Math.sin(frame * 0.15) * 2;
     if (b.stateTimer % 25 === 0) {
       const angle = Math.atan2(player.y - b.y, player.x - b.x);
       enemyBullets.push({
@@ -1566,14 +1578,15 @@ function updateMetaKnight(b) {
       });
       playTone(500, 0.08, 'square', 0.05);
     }
-    if (b.stateTimer <= 0) { b.state = 'idle'; b.stateTimer = 75; }
+    if (b.stateTimer <= 0) { b.state = 'return'; }
   } else if (b.state === 'tornado') {
     b.attackAnim = b.stateTimer;
-    // Spin around center
     const cx = W / 2, cy = 150;
     const angle = (100 - b.stateTimer) * 0.08;
-    b.x = cx + Math.cos(angle) * 100;
-    b.y = cy + Math.sin(angle) * 50;
+    const orbX = cx + Math.cos(angle) * 100;
+    const orbY = cy + Math.sin(angle) * 50;
+    b.x += (orbX - b.x) * 0.12;
+    b.y += (orbY - b.y) * 0.12;
 
     if (b.stateTimer % 12 === 0) {
       enemyBullets.push({
@@ -1582,14 +1595,28 @@ function updateMetaKnight(b) {
         type: 'bossSword', w: 12, h: 8
       });
     }
-    if (b.stateTimer <= 0) { b.state = 'idle'; b.stateTimer = 40; }
+    if (b.stateTimer <= 0) { b.state = 'return'; }
   }
 }
 
 function updateGigantEdge(b) {
   const spd = b.phase === 2 ? 2 : 1.5;
+  const returnSpd = b.phase === 2 ? 3.5 : 2.5;
 
-  if (b.state === 'idle') {
+  if (b.state === 'return') {
+    // Fly back to idle area at constant speed
+    const tx = W / 2, ty = b.targetY;
+    const dx = tx - b.x, dy = ty - b.y;
+    const d = Math.hypot(dx, dy);
+    if (d > returnSpd) {
+      b.x += (dx / d) * returnSpd;
+      b.y += (dy / d) * returnSpd;
+    } else {
+      b.x = tx; b.y = ty;
+      b.state = 'idle';
+      b.stateTimer = 60;
+    }
+  } else if (b.state === 'idle') {
     // Slow side-to-side movement
     b.x += b.moveDir * spd;
     if (b.x < 60 || b.x > W - 60) b.moveDir *= -1;
@@ -1615,7 +1642,6 @@ function updateGigantEdge(b) {
   } else if (b.state === 'swordSlam') {
     b.attackAnim = b.stateTimer;
     if (b.stateTimer === 40) {
-      // Ground slam - shockwave
       screenShake(8, 15);
       playTone(80, 0.4, 'sawtooth', 0.12);
       const count = b.phase === 2 ? 5 : 3;
@@ -1628,19 +1654,16 @@ function updateGigantEdge(b) {
         });
       }
     }
-    if (b.stateTimer <= 0) { b.state = 'idle'; b.stateTimer = 80; }
+    if (b.stateTimer <= 0) { b.state = 'return'; }
   } else if (b.state === 'shieldBash') {
     b.attackAnim = Math.max(0, b.stateTimer - 40);
     if (b.stateTimer > 40) {
-      // Charge toward player x
       const dx = player.x - b.x;
       b.x += Math.sign(dx) * (b.phase === 2 ? 4 : 3);
     }
     if (b.stateTimer === 40) {
-      // Shield slam
       screenShake(5, 12);
       playTone(120, 0.3, 'square', 0.1);
-      // Bullets from shield
       for (let i = -1; i <= 1; i++) {
         enemyBullets.push({
           x: b.x - 30, y: b.y + i * 20,
@@ -1654,7 +1677,7 @@ function updateGigantEdge(b) {
         });
       }
     }
-    if (b.stateTimer <= 0) { b.state = 'idle'; b.stateTimer = 75; }
+    if (b.stateTimer <= 0) { b.state = 'return'; }
   } else if (b.state === 'rockThrow') {
     b.attackAnim = b.stateTimer;
     if (b.stateTimer % (b.phase === 2 ? 20 : 30) === 0 && b.stateTimer > 10) {
@@ -1666,10 +1689,9 @@ function updateGigantEdge(b) {
       });
       playTone(150, 0.1, 'sawtooth', 0.06);
     }
-    if (b.stateTimer <= 0) { b.state = 'idle'; b.stateTimer = 75; }
+    if (b.stateTimer <= 0) { b.state = 'return'; }
   } else if (b.state === 'charge') {
     b.attackAnim = b.stateTimer;
-    // Rush toward player
     const dx = player.x - b.x;
     const dy = player.y - 50 - b.y;
     const d = Math.hypot(dx, dy);
@@ -1685,9 +1707,7 @@ function updateGigantEdge(b) {
       });
     }
     if (b.stateTimer <= 0) {
-      b.state = 'idle';
-      b.stateTimer = 80;
-      b.y = b.targetY;
+      b.state = 'return';
     }
   }
 }
