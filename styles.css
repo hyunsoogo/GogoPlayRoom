@@ -9,7 +9,7 @@ body {
   font-family: 'Press Start 2P', cursive;
   background: #1a3a5c;
   color: #fff;
-  overflow-x: hidden;
+  overflow: hidden;
   min-height: 100vh;
   image-rendering: pixelated;
 }
