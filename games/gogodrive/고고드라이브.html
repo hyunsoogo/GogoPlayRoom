@@ -55,7 +55,7 @@
         }
 
         /* HUD */
-        #hud { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 5; }
+        #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
         #scoreBox {
             position: absolute; top: 20px; left: 20px;
             background: linear-gradient(180deg, #2196F3, #1565C0);
@@ -237,26 +237,99 @@
             border: 2px solid rgba(255,255,255,0.3);
             padding: 4px; display: flex; flex-direction: column;
             align-items: center; justify-content: flex-end;
-            overflow: hidden;
         }
         #boostFill {
             width: 100%; border-radius: 15px;
             background: linear-gradient(0deg, #0066FF, #00CCFF);
             transition: height 0.1s linear;
+            max-height: 100%; overflow: hidden;
         }
         #boostGauge.active #boostFill {
             background: linear-gradient(0deg, #FF6600, #FFCC00);
             box-shadow: 0 0 14px rgba(255,150,0,0.9);
         }
         #boostGauge.empty { opacity: 0.4; }
+
+        /* Missile Gauge */
+        #missileGauge {
+            position: absolute; right: 68px; bottom: 30px;
+            width: 38px; height: 180px;
+            background: rgba(0,0,0,0.5); border-radius: 19px;
+            border: 2px solid rgba(255,255,255,0.3);
+            padding: 4px; display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-end;
+        }
+        #missileFill {
+            width: 100%; border-radius: 15px;
+            background: linear-gradient(0deg, #FF2200, #FF8800);
+            transition: height 0.1s linear;
+            max-height: 100%; overflow: hidden;
+        }
+        #missileGauge.ready {
+            border-color: #FF4400;
+            animation: missileReady 0.4s ease-in-out infinite;
+        }
+        #missileGauge.ready #missileFill {
+            background: linear-gradient(0deg, #FF0000, #FFDD00);
+            box-shadow: 0 0 20px rgba(255,80,0,0.9);
+            animation: missileFillBlink 0.4s ease-in-out infinite;
+        }
+        @keyframes missileReady {
+            0%,100% { border-color: #FF4400; box-shadow: 0 0 10px rgba(255,68,0,0.5); }
+            50% { border-color: #FFDD00; box-shadow: 0 0 25px rgba(255,200,0,0.8); }
+        }
+        @keyframes missileFillBlink {
+            0%,100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        #missileLabel {
+            position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+            width: 28px; height: 28px;
+            background: linear-gradient(180deg, #FF6600, #CC2200);
+            border-radius: 6px; border: 2px solid rgba(255,255,255,0.4);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+        }
+        #missileIcon {
+            position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+            color: #FF4400; font-size: 18px;
+        }
         #boostLabel {
-            position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
-            color: #fff; font-size: 10px; font-weight: bold; white-space: nowrap;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+            width: 28px; height: 28px;
+            background: linear-gradient(180deg, #00CCFF, #0066FF);
+            border-radius: 6px; border: 2px solid rgba(255,255,255,0.4);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
         }
         #boostIcon {
             position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
             color: #FFD700; font-size: 18px;
+        }
+
+        /* HP Bar */
+        #hpBar {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 22px;
+            background: rgba(0,0,0,0.5); border-radius: 11px;
+            border: 2px solid rgba(255,255,255,0.3);
+            padding: 3px; overflow: hidden;
+        }
+        #hpFill {
+            width: 100%; height: 100%; border-radius: 8px;
+            background: linear-gradient(90deg, #FF3333, #FF6666, #44FF44);
+            transition: width 0.3s ease;
+        }
+        #hpLabel {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 12px; font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+        #hpBar.hit { animation: hpHit 0.3s ease; }
+        @keyframes hpHit {
+            0%,100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.1); }
         }
 
         /* Boost Screen Overlay */
@@ -350,22 +423,31 @@
         <button class="btn btn-start" id="btnStart">게임 시작</button>
         <div class="controls-hint">
             ← → 방향키 또는 A/D 로 조작<br>
-            ↑ 또는 W 점프 | SPACE 부스터<br>
+            ↑ 또는 W 점프 | SPACE 부스터 | Z 유도탄<br>
             모바일: 좌/우 스와이프 | 위로 스와이프 점프
         </div>
     </div>
 
     <!-- HUD -->
     <div id="hud" class="hidden">
+        <div id="hpBar">
+            <div id="hpFill" style="width:100%"></div>
+            <div id="hpLabel">HP 100%</div>
+        </div>
         <div id="scoreBox">
             <span id="scoreLabel">Score</span>
             <span id="scoreValue">0</span>
         </div>
         <div id="speedIndicator"></div>
         <div id="boostGauge">
-            <span id="boostLabel">BOOST [SPACE]</span>
+            <span id="boostLabel">⚡</span>
             <div id="boostFill" style="height:100%"></div>
             <span id="boostIcon">🔥</span>
+        </div>
+        <div id="missileGauge">
+            <span id="missileLabel">🚀</span>
+            <div id="missileFill" style="height:0%"></div>
+            <span id="missileIcon">🚀</span>
         </div>
         <button id="boostBtn">BOOST</button>
     </div>
@@ -469,12 +551,23 @@
     const BOSS_WARNING_DISTANCE = 100;
     const BOSS_SPAWN_Z = -200;
     const BOSS_FIGHT_Z = -50;
-    const BOSS_BASE_HP = 30;
-    const BOSS_HP_SCALE = 25;
+    const BOSS_BASE_HP = 80;
+    const BOSS_HP_SCALE = 40;
     const BOSS_LANE_SWITCH_INTERVAL = 2.0;
     const BOSS_HIT_COOLDOWN = 1.0;
     const BOSS_BOUNCE_VEL_Z = 15;
     const BOSS_BOUNCE_VEL_Y = 6;
+
+    // Missile
+    const MISSILE_MAX_CHARGE = 100;
+    const MISSILE_CHARGE_PER_BOMB = 25;
+    const MISSILE_BOSS_DAMAGE = 30;
+    const MISSILE_SPEED = 20;
+
+    // Player HP
+    const PLAYER_MAX_HP = 100;
+    const PLAYER_HIT_DAMAGE = 20;
+    const PLAYER_INVINCIBLE_TIME = 2.0;
 
     // ==========================================
     // STATE
@@ -502,6 +595,10 @@
     let crashVel = { x: 0, y: 0, z: 0 };
     let crashRot = { x: 0, y: 0, z: 0 };
 
+    // Player HP
+    let playerHP = PLAYER_MAX_HP;
+    let invincibleTimer = 0;
+
     const roadChunks = [];
     const coins = [];
     const obstacles = [];
@@ -512,6 +609,12 @@
     const scatterCoins = [];
     let bombJumpVel = 0;
     let isJumping = false;
+
+    // Missile state
+    let missileCharge = 0;
+    let missileActive = false;
+    let missileMesh = null;
+    let missileTrailParticles = [];
 
     // Boss state
     let bossActive = false;
@@ -544,6 +647,11 @@
     const bossHPFillEl = document.getElementById('bossHPFill');
     const bossHPNameEl = document.getElementById('bossHPName');
     const bossHPLabelEl = document.getElementById('bossHPLabel');
+    const missileGaugeEl = document.getElementById('missileGauge');
+    const missileFillEl = document.getElementById('missileFill');
+    const hpBarEl = document.getElementById('hpBar');
+    const hpFillEl = document.getElementById('hpFill');
+    const hpLabelEl = document.getElementById('hpLabel');
 
     // Load rankings
     function loadRankings() {
@@ -1244,6 +1352,56 @@
         }
     }
 
+    function createHealthPack(x, z) {
+        const pack = new THREE.Group();
+
+        // Green box
+        const box = new THREE.Mesh(
+            new THREE.BoxGeometry(1.2, 1.2, 1.2),
+            new THREE.MeshPhongMaterial({ color: 0x22AA22, shininess: 80, emissive: 0x115511, emissiveIntensity: 0.3 })
+        );
+        pack.add(box);
+
+        // White cross (horizontal bar)
+        const crossH = new THREE.Mesh(
+            new THREE.BoxGeometry(0.8, 0.15, 0.25),
+            new THREE.MeshBasicMaterial({ color: 0xFFFFFF })
+        );
+        crossH.position.z = 0.61;
+        pack.add(crossH);
+
+        // White cross (vertical bar)
+        const crossV = new THREE.Mesh(
+            new THREE.BoxGeometry(0.25, 0.15, 0.8),
+            new THREE.MeshBasicMaterial({ color: 0xFFFFFF })
+        );
+        crossV.position.z = 0.61;
+        // Rotate to face front as cross
+        crossV.rotation.x = Math.PI / 2;
+        crossV.position.set(0, 0, 0.61);
+        pack.add(crossV);
+
+        // Back side cross
+        const crossH2 = crossH.clone();
+        crossH2.position.z = -0.61;
+        pack.add(crossH2);
+        const crossV2 = crossV.clone();
+        crossV2.position.z = -0.61;
+        pack.add(crossV2);
+
+        // Glow
+        const glow = new THREE.Mesh(
+            new THREE.SphereGeometry(1.0, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0x44FF44, transparent: true, opacity: 0.2 })
+        );
+        pack.add(glow);
+
+        pack.position.set(x, 1.5, z);
+        pack.userData = { isHealthPack: true, baseY: 1.5, time: Math.random() * Math.PI * 2 };
+        scene.add(pack);
+        coins.push(pack);
+    }
+
     function createCoinScatter(fromX, fromY, fromZ, count) {
         const coinGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.12, 12);
         const coinMat = new THREE.MeshPhongMaterial({
@@ -1311,6 +1469,153 @@
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
         if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    // ==========================================
+    // BGM - Procedural driving music
+    // ==========================================
+    let bgmPlaying = false;
+    let bgmNodes = [];
+    let bgmGain = null;
+    let bgmBassOsc = null;
+    let bgmNextBeat = 0;
+    let bgmBPM = 130;
+    let bgmBeatIndex = 0;
+    let bgmInterval = null;
+
+    // Upbeat driving melody in E minor / G major
+    const BGM_BASS_NOTES = [164.81, 164.81, 196.00, 196.00, 146.83, 146.83, 130.81, 130.81]; // E3, G3, D3, C3
+    const BGM_MELODY_NOTES = [
+        659.25, 587.33, 523.25, 587.33,  // E5 D5 C5 D5
+        493.88, 523.25, 587.33, 659.25,  // B4 C5 D5 E5
+        783.99, 659.25, 587.33, 523.25,  // G5 E5 D5 C5
+        493.88, 523.25, 659.25, 587.33   // B4 C5 E5 D5
+    ];
+
+    function startBGM() {
+        if (bgmPlaying || !audioCtx) return;
+        bgmPlaying = true;
+        bgmBeatIndex = 0;
+
+        // Master gain for BGM
+        bgmGain = audioCtx.createGain();
+        bgmGain.gain.value = 0.18;
+        bgmGain.connect(audioCtx.destination);
+
+        // Pad: sustained warm chord
+        const padGain = audioCtx.createGain();
+        padGain.gain.value = 0.06;
+        padGain.connect(bgmGain);
+
+        const padNotes = [164.81, 196.00, 246.94, 329.63]; // E3 G3 B3 E4
+        padNotes.forEach(freq => {
+            const osc = audioCtx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            osc.connect(padGain);
+            osc.start();
+            bgmNodes.push(osc);
+        });
+        bgmNodes.push(padGain);
+
+        // Beat scheduling
+        const beatDuration = 60 / bgmBPM;
+
+        bgmInterval = setInterval(() => {
+            if (!audioCtx || !bgmPlaying) return;
+            const now = audioCtx.currentTime;
+
+            // Bass line
+            const bassNote = BGM_BASS_NOTES[bgmBeatIndex % BGM_BASS_NOTES.length];
+            const bassOsc = audioCtx.createOscillator();
+            const bassGain = audioCtx.createGain();
+            bassOsc.type = 'sawtooth';
+            bassOsc.frequency.value = bassNote;
+            bassGain.gain.setValueAtTime(0.12, now);
+            bassGain.gain.exponentialRampToValueAtTime(0.01, now + beatDuration * 0.8);
+            bassOsc.connect(bassGain);
+            bassGain.connect(bgmGain);
+            bassOsc.start(now);
+            bassOsc.stop(now + beatDuration * 0.9);
+
+            // Hi-hat on every beat
+            const hatBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate);
+            const hatData = hatBuf.getChannelData(0);
+            for (let i = 0; i < hatData.length; i++) hatData[i] = (Math.random() * 2 - 1) * 0.3;
+            const hatSrc = audioCtx.createBufferSource();
+            hatSrc.buffer = hatBuf;
+            const hatGain = audioCtx.createGain();
+            hatGain.gain.setValueAtTime(0.08, now);
+            hatGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+            hatSrc.connect(hatGain);
+            hatGain.connect(bgmGain);
+            hatSrc.start(now);
+
+            // Kick on beats 0, 2, 4, 6
+            if (bgmBeatIndex % 2 === 0) {
+                const kickOsc = audioCtx.createOscillator();
+                const kickGain = audioCtx.createGain();
+                kickOsc.type = 'sine';
+                kickOsc.frequency.setValueAtTime(150, now);
+                kickOsc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+                kickGain.gain.setValueAtTime(0.2, now);
+                kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                kickOsc.connect(kickGain);
+                kickGain.connect(bgmGain);
+                kickOsc.start(now);
+                kickOsc.stop(now + 0.2);
+            }
+
+            // Snare on beats 1, 3, 5, 7
+            if (bgmBeatIndex % 2 === 1) {
+                const snareBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.1, audioCtx.sampleRate);
+                const snareData = snareBuf.getChannelData(0);
+                for (let i = 0; i < snareData.length; i++) snareData[i] = (Math.random() * 2 - 1);
+                const snareSrc = audioCtx.createBufferSource();
+                snareSrc.buffer = snareBuf;
+                const snareGain = audioCtx.createGain();
+                snareGain.gain.setValueAtTime(0.1, now);
+                snareGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                snareSrc.connect(snareGain);
+                snareGain.connect(bgmGain);
+                snareSrc.start(now);
+            }
+
+            // Melody every 2 beats
+            if (bgmBeatIndex % 2 === 0) {
+                const melodyNote = BGM_MELODY_NOTES[Math.floor(bgmBeatIndex / 2) % BGM_MELODY_NOTES.length];
+                const melOsc = audioCtx.createOscillator();
+                const melGain = audioCtx.createGain();
+                melOsc.type = 'square';
+                melOsc.frequency.value = melodyNote;
+                melGain.gain.setValueAtTime(0.04, now);
+                melGain.gain.setValueAtTime(0.04, now + beatDuration * 1.5);
+                melGain.gain.exponentialRampToValueAtTime(0.001, now + beatDuration * 1.9);
+                melOsc.connect(melGain);
+                melGain.connect(bgmGain);
+                melOsc.start(now);
+                melOsc.stop(now + beatDuration * 2);
+            }
+
+            bgmBeatIndex++;
+        }, beatDuration * 1000);
+    }
+
+    function stopBGM() {
+        bgmPlaying = false;
+        if (bgmInterval) {
+            clearInterval(bgmInterval);
+            bgmInterval = null;
+        }
+        bgmNodes.forEach(n => {
+            try { n.stop(); } catch(e) {}
+            try { n.disconnect(); } catch(e) {}
+        });
+        bgmNodes = [];
+        if (bgmGain) {
+            try { bgmGain.disconnect(); } catch(e) {}
+            bgmGain = null;
+        }
     }
 
     function playSound(type) {
@@ -1512,6 +1817,34 @@
                     osc.start(now + idx * 0.1);
                     osc.stop(now + 1.2);
                 });
+            } else if (type === 'missileFire') {
+                // Rocket launch whoosh
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+                osc.frequency.exponentialRampToValueAtTime(400, now + 0.8);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.15, now + 0.3);
+                gain.gain.linearRampToValueAtTime(0, now + 0.8);
+                osc.start(now);
+                osc.stop(now + 0.8);
+                // Noise burst for exhaust
+                const bufferSize = audioCtx.sampleRate * 0.5;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize) * 0.5;
+                const noise = audioCtx.createBufferSource();
+                const noiseGain = audioCtx.createGain();
+                noise.buffer = buffer;
+                noise.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noiseGain.gain.setValueAtTime(0.15, now);
+                noiseGain.gain.linearRampToValueAtTime(0, now + 0.5);
+                noise.start(now);
             } else if (type === 'jump') {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
@@ -1545,16 +1878,20 @@
     function setupInput() {
         document.addEventListener('keydown', (e) => {
             if (gameState !== 'playing') return;
-            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+            const code = e.code;
+            const key = e.key;
+            if (key === 'ArrowLeft' || code === 'KeyA') {
                 changeLane(-1);
-            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+            } else if (key === 'ArrowRight' || code === 'KeyD') {
                 changeLane(1);
-            } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+            } else if (key === 'ArrowUp' || code === 'KeyW') {
                 e.preventDefault();
                 performJump();
-            } else if (e.key === ' ') {
+            } else if (key === ' ') {
                 e.preventDefault();
                 if (!boostActive && boostFuel > 5) activateBoost();
+            } else if (code === 'KeyZ') {
+                fireMissile();
             }
         });
 
@@ -1625,6 +1962,180 @@
     }
 
     // ==========================================
+    // MISSILE SYSTEM
+    // ==========================================
+    function updateMissileGauge() {
+        const pct = (missileCharge / MISSILE_MAX_CHARGE * 100);
+        missileFillEl.style.height = pct + '%';
+        missileGaugeEl.classList.toggle('ready', missileCharge >= MISSILE_MAX_CHARGE);
+    }
+
+    function fireMissile() {
+        if (missileCharge < MISSILE_MAX_CHARGE || missileActive) return;
+
+        missileCharge = 0;
+        updateMissileGauge();
+        missileActive = true;
+        playSound('missileFire');
+
+        // Create missile mesh (large and visible)
+        const missile = new THREE.Group();
+        // Body
+        const bodyGeo = new THREE.CylinderGeometry(0.4, 0.7, 4.0, 10);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xCC2200, metalness: 0.6, roughness: 0.3, emissive: 0x441100, emissiveIntensity: 0.3 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.rotation.x = Math.PI / 2;
+        missile.add(body);
+        // Nose cone
+        const noseGeo = new THREE.ConeGeometry(0.4, 1.2, 10);
+        const noseMat = new THREE.MeshStandardMaterial({ color: 0xFF4400, metalness: 0.5, emissive: 0xFF2200, emissiveIntensity: 0.4 });
+        const nose = new THREE.Mesh(noseGeo, noseMat);
+        nose.rotation.x = -Math.PI / 2;
+        nose.position.z = -2.6;
+        missile.add(nose);
+        // Fins
+        const finGeo = new THREE.BoxGeometry(1.4, 0.08, 0.8);
+        const finMat = new THREE.MeshStandardMaterial({ color: 0x881100 });
+        const fin1 = new THREE.Mesh(finGeo, finMat);
+        fin1.position.z = 1.6;
+        missile.add(fin1);
+        const fin2 = new THREE.Mesh(finGeo.clone(), finMat);
+        fin2.rotation.z = Math.PI / 2;
+        fin2.position.z = 1.6;
+        missile.add(fin2);
+        // Exhaust glow
+        const exhaustGeo = new THREE.SphereGeometry(0.6, 8, 8);
+        const exhaustMat = new THREE.MeshBasicMaterial({ color: 0xFF6600, transparent: true, opacity: 0.8 });
+        const exhaust = new THREE.Mesh(exhaustGeo, exhaustMat);
+        exhaust.position.z = 2.2;
+        missile.add(exhaust);
+        // Point light on missile
+        const missileLight = new THREE.PointLight(0xFF4400, 2, 15);
+        missileLight.position.z = 2.2;
+        missile.add(missileLight);
+
+        missile.position.set(playerCar.position.x, 2.0, playerCar.position.z - 3);
+        missile.userData.wobbleTime = 0;
+        scene.add(missile);
+        missileMesh = missile;
+        missileTrailParticles = [];
+    }
+
+    function updateMissile(delta) {
+        if (!missileActive || !missileMesh) return;
+
+        missileMesh.userData.wobbleTime += delta;
+        const wt = missileMesh.userData.wobbleTime;
+
+        let target;
+        let hasBossTarget = bossMesh && bossActive && bossPhase === 'fighting';
+        if (hasBossTarget) {
+            target = bossMesh.position.clone();
+            target.y += 1.5;
+        } else {
+            // No boss: fly forward
+            target = missileMesh.position.clone();
+            target.z -= 50;
+        }
+
+        const dir = new THREE.Vector3().subVectors(target, missileMesh.position);
+        const dist = dir.length();
+        dir.normalize();
+
+        // Wobble offset
+        const wobbleX = Math.sin(wt * 5.0) * 3.0;
+        const wobbleY = Math.cos(wt * 3.7) * 2.0;
+        const wobbleDir = new THREE.Vector3(wobbleX, wobbleY, 0);
+
+        const moveDir = dir.clone().multiplyScalar(MISSILE_SPEED).add(wobbleDir);
+        missileMesh.position.add(moveDir.clone().multiplyScalar(delta));
+
+        missileMesh.lookAt(target);
+        // Wobble rotation for visual effect
+        missileMesh.rotation.z = Math.sin(wt * 6) * 0.3;
+
+        // Smoke trail (small)
+        if (Math.random() < 0.6) {
+            const size = 0.15 + Math.random() * 0.25;
+            const smoke = new THREE.Mesh(
+                new THREE.SphereGeometry(size, 4, 4),
+                new THREE.MeshBasicMaterial({ color: Math.random() > 0.3 ? 0x999999 : 0xFF6600, transparent: true, opacity: 0.6 })
+            );
+            smoke.position.copy(missileMesh.position);
+            smoke.position.x += (Math.random() - 0.5) * 0.3;
+            smoke.position.y += (Math.random() - 0.5) * 0.3;
+            smoke.position.z += 1;
+            smoke.userData = { life: 0.6 };
+            scene.add(smoke);
+            missileTrailParticles.push(smoke);
+        }
+
+        // Update trail particles
+        for (let i = missileTrailParticles.length - 1; i >= 0; i--) {
+            const p = missileTrailParticles[i];
+            p.userData.life -= delta;
+            p.material.opacity = Math.max(0, p.userData.life * 0.5);
+            p.scale.multiplyScalar(1 + delta * 1.5);
+            p.position.y += delta * 1.5;
+            if (p.userData.life <= 0) {
+                scene.remove(p);
+                missileTrailParticles.splice(i, 1);
+            }
+        }
+
+        // Hit boss or expire
+        if (hasBossTarget && dist < 6) {
+            missileHitBoss();
+        } else if (wt > 5.0) {
+            // Expire after 5 seconds if no boss hit
+            createExplosion(missileMesh.position.x, missileMesh.position.y, missileMesh.position.z);
+            cleanupMissile();
+        }
+    }
+
+    function missileHitBoss() {
+        // Big explosion at boss
+        createExplosion(bossMesh.position.x, bossMesh.position.y + 2, bossMesh.position.z);
+        createExplosion(bossMesh.position.x + 1, bossMesh.position.y + 1, bossMesh.position.z - 1);
+        createExplosion(bossMesh.position.x - 1, bossMesh.position.y + 3, bossMesh.position.z + 1);
+        playSound('bossDefeat');
+
+        // Damage boss
+        bossHP -= MISSILE_BOSS_DAMAGE;
+        updateBossHPBar();
+        showBossDamagePopup(MISSILE_BOSS_DAMAGE);
+
+        // Flash screen
+        flashOverlay.style.background = '#FFAA00';
+        flashOverlay.style.opacity = '0.4';
+        setTimeout(() => { flashOverlay.style.opacity = '0'; flashOverlay.style.background = 'red'; }, 300);
+
+        // Boss spin animation
+        if (bossHP > 0) {
+            bossMesh.userData.spinTimer = 1.0;
+        } else {
+            startBossDefeat();
+        }
+
+        // Clean up missile
+        scene.remove(missileMesh);
+        missileMesh = null;
+        missileActive = false;
+        missileTrailParticles.forEach(p => scene.remove(p));
+        missileTrailParticles = [];
+    }
+
+    function cleanupMissile() {
+        if (missileMesh) {
+            scene.remove(missileMesh);
+            missileMesh = null;
+        }
+        missileActive = false;
+        missileTrailParticles.forEach(p => scene.remove(p));
+        missileTrailParticles = [];
+    }
+
+    // ==========================================
     // COLLISION DETECTION
     // ==========================================
     function checkCollisions() {
@@ -1638,7 +2149,32 @@
             const dx = Math.abs(coin.position.x - px);
             const dz = Math.abs(coin.position.z - pz);
             if (dx < 1.5 && dz < 1.8) {
-                if (coin.userData.isBomb) {
+                // Skip bomb if player is jumping high enough
+                if (coin.userData.isBomb && playerCar.position.y > JUMP_INVINCIBLE_HEIGHT) {
+                    continue;
+                }
+                if (coin.userData.isHealthPack) {
+                    // Health recovery: 50~100%
+                    const healAmount = Math.floor(PLAYER_MAX_HP * (0.5 + Math.random() * 0.5));
+                    playerHP = Math.min(PLAYER_MAX_HP, playerHP + healAmount);
+                    updateHPBar();
+                    playSound('coin');
+                    showScorePopup(coin, healAmount);
+                    // Green flash
+                    flashOverlay.style.background = '#44FF44';
+                    flashOverlay.style.opacity = '0.3';
+                    setTimeout(() => { flashOverlay.style.opacity = '0'; flashOverlay.style.background = 'red'; }, 300);
+                    scene.remove(coin);
+                    coins.splice(i, 1);
+                    continue;
+                } else if (coin.userData.isBomb) {
+                    // Bomb damages HP slightly (3%)
+                    playerHP = Math.max(0, playerHP - 3);
+                    updateHPBar();
+                    if (playerHP <= 0) {
+                        startCrash(coin);
+                        return;
+                    }
                     // Bomb hit! Sonic-style coin scatter
                     const lostCoins = Math.min(Math.floor(score / COIN_VALUE), 10);
                     score = Math.max(0, score - BOMB_PENALTY);
@@ -1650,6 +2186,9 @@
                     if (lostCoins > 0) {
                         createCoinScatter(px, 1.5, pz, lostCoins);
                     }
+                    // Charge missile gauge
+                    missileCharge = Math.min(MISSILE_MAX_CHARGE, missileCharge + MISSILE_CHARGE_PER_BOMB);
+                    updateMissileGauge();
                     // Car jumps from bomb blast
                     bombJumpVel = 12;
                     flashOverlay.style.background = '#FF4400';
@@ -1658,6 +2197,8 @@
                 } else {
                     // Coin collected
                     coinsCollected++;
+                    missileCharge = Math.min(MISSILE_MAX_CHARGE, missileCharge + 2);
+                    updateMissileGauge();
                     const pts = boostActive ? COIN_VALUE * 2 : COIN_VALUE;
                     score += pts;
                     updateScoreUI();
@@ -1669,14 +2210,23 @@
             }
         }
 
-        // Obstacles → crash animation (disabled during boss fight, skip if jumping high)
-        if (!bossActive && playerCar.position.y < JUMP_INVINCIBLE_HEIGHT) {
+        // Obstacles → HP damage (disabled during boss fight, skip if jumping high or invincible)
+        if (!bossActive && playerCar.position.y < JUMP_INVINCIBLE_HEIGHT && invincibleTimer <= 0) {
             for (let i = 0; i < obstacles.length; i++) {
                 const obs = obstacles[i];
                 const dx = Math.abs(obs.position.x - px);
                 const dz = Math.abs(obs.position.z - pz);
                 if (dx < 1.8 && dz < 3.5) {
-                    startCrash(obs);
+                    playerHP -= PLAYER_HIT_DAMAGE;
+                    updateHPBar();
+                    if (playerHP <= 0) {
+                        playerHP = 0;
+                        updateHPBar();
+                        startCrash(obs);
+                        return;
+                    }
+                    // Not dead: knockback + invincibility
+                    hitKnockback(obs);
                     return;
                 }
             }
@@ -1802,8 +2352,10 @@
 
         if (bossPhase === 'fighting') {
             // Keep boss at fixed distance from player (moves with road)
+            // When boosting, boss is closer (easier to ram)
+            const fightZ = boostActive ? BOSS_FIGHT_Z * 0.35 : BOSS_FIGHT_Z;
             bossMesh.position.z += moveDist;
-            bossMesh.position.z += (BOSS_FIGHT_Z - bossMesh.position.z) * 0.05;
+            bossMesh.position.z += (fightZ - bossMesh.position.z) * 0.05;
 
             // Lane switching AI
             bossLaneSwitchTimer -= delta;
@@ -1819,6 +2371,18 @@
                 bossTargetX = LANE_POSITIONS[bossCurrentLane];
             }
             bossMesh.position.x += (bossTargetX - bossMesh.position.x) * 0.08;
+
+            // Missile spin animation
+            if (bossMesh.userData.spinTimer > 0) {
+                bossMesh.userData.spinTimer -= delta;
+                bossMesh.rotation.y += Math.PI * 4 * delta;
+                bossMesh.position.y = 1.5 * Math.sin(bossMesh.userData.spinTimer * Math.PI);
+                if (bossMesh.userData.spinTimer <= 0) {
+                    bossMesh.rotation.y = 0;
+                    bossMesh.position.y = 0;
+                    bossMesh.userData.spinTimer = 0;
+                }
+            }
 
             // Pulse warning lights
             const pulseVal = Math.sin(clock.elapsedTime * 8) * 0.5 + 0.5;
@@ -1870,8 +2434,8 @@
         const dz = Math.abs(bz - pz);
 
         if (dx < 2.5 && dz < 5.0) {
-            bossHitCooldown = BOSS_HIT_COOLDOWN;
-            const damage = coinsCollected;
+            bossHitCooldown = boostActive ? BOSS_HIT_COOLDOWN * 0.4 : BOSS_HIT_COOLDOWN;
+            const damage = boostActive ? Math.max(Math.floor(coinsCollected * 0.1), 5) : Math.floor(coinsCollected * 0.05);
 
             if (damage > 0) {
                 bossHP -= damage;
@@ -1893,8 +2457,13 @@
                 playSound('bossHit');
             }
 
-            // Bounce player back
-            triggerBossBounce();
+            // Boosting: light bounce only, keep boost active
+            if (boostActive) {
+                bossBounceVel.z = BOSS_BOUNCE_VEL_Z * 0.3;
+                bossBounceVel.y = BOSS_BOUNCE_VEL_Y * 0.3;
+            } else {
+                triggerBossBounce();
+            }
         }
     }
 
@@ -1910,6 +2479,11 @@
         bossPhase = 'defeated';
         bossDefeatTimer = 2.0;
         playSound('bossDefeat');
+
+        // Drop health pack at boss position
+        if (bossMesh) {
+            createHealthPack(bossMesh.position.x, bossMesh.position.z);
+        }
 
         // Big explosion
         for (let i = 0; i < 5; i++) {
@@ -1988,6 +2562,7 @@
     // ==========================================
     function startGame() {
         initAudio();
+        startBGM();
         gameState = 'playing';
         score = 0;
         speed = INITIAL_SPEED;
@@ -2025,6 +2600,19 @@
         bombJumpVel = 0;
         isJumping = false;
 
+        // Reset HP
+        playerHP = PLAYER_MAX_HP;
+        invincibleTimer = 0;
+        hitSpinTimer = 0;
+        hitVel = { x: 0, y: 0, z: 0 };
+        hitRotVel = { x: 0, y: 0, z: 0 };
+        updateHPBar();
+
+        // Reset missile
+        missileCharge = 0;
+        cleanupMissile();
+        updateMissileGauge();
+
         // Reset camera
         camera.position.set(0, 7, 13);
         camera.lookAt(0, 1, -20);
@@ -2047,6 +2635,59 @@
         hud.classList.remove('hidden');
 
         clock.getDelta(); // reset delta
+    }
+
+    function updateHPBar() {
+        const pct = Math.max(0, playerHP / PLAYER_MAX_HP * 100);
+        hpFillEl.style.width = pct + '%';
+        hpLabelEl.textContent = 'HP ' + Math.round(pct) + '%';
+        // Color shifts: green → yellow → red
+        if (pct > 50) {
+            hpFillEl.style.background = 'linear-gradient(90deg, #44CC44, #88FF44)';
+        } else if (pct > 25) {
+            hpFillEl.style.background = 'linear-gradient(90deg, #FFAA00, #FFDD00)';
+        } else {
+            hpFillEl.style.background = 'linear-gradient(90deg, #FF2222, #FF6644)';
+        }
+        hpBarEl.classList.remove('hit');
+        void hpBarEl.offsetWidth; // reflow
+        hpBarEl.classList.add('hit');
+    }
+
+    let hitSpinTimer = 0;
+    let hitVel = { x: 0, y: 0, z: 0 };
+    let hitRotVel = { x: 0, y: 0, z: 0 };
+
+    function hitKnockback(hitObstacle) {
+        invincibleTimer = PLAYER_INVINCIBLE_TIME;
+        deactivateBoost();
+        playSound('crash');
+
+        // Launch car upward like crash (but recoverable)
+        const dx = playerCar.position.x - hitObstacle.position.x;
+        hitSpinTimer = 1.2;
+        hitVel.x = dx * 3 + (Math.random() - 0.5) * 2;
+        hitVel.y = 10 + Math.random() * 3;
+        hitVel.z = 2 + Math.random() * 2;
+        hitRotVel.x = (Math.random() - 0.5) * 6;
+        hitRotVel.y = (Math.random() - 0.5) * 4;
+        hitRotVel.z = (Math.random() - 0.5) * 8;
+
+        // Explosion at impact
+        createExplosion(
+            (playerCar.position.x + hitObstacle.position.x) / 2,
+            1,
+            (playerCar.position.z + hitObstacle.position.z) / 2
+        );
+
+        // Flash red
+        flashOverlay.style.opacity = '0.4';
+        setTimeout(() => flashOverlay.style.opacity = '0', 300);
+
+        // Remove the obstacle we hit
+        scene.remove(hitObstacle);
+        const idx = obstacles.indexOf(hitObstacle);
+        if (idx >= 0) obstacles.splice(idx, 1);
     }
 
     function startCrash(hitObstacle) {
@@ -2092,9 +2733,15 @@
     }
 
     function finishGameOver() {
+        stopBGM();
         gameState = 'gameover';
         gameOverPhase = 'stats';
         newRankIdx = score > 0 ? getRankPosition(score) : -1;
+
+        // Hide boss UI
+        bossWarningEl.style.display = 'none';
+        bossHPBarEl.style.display = 'none';
+        cleanupMissile();
 
         // Reset sub-screens
         document.getElementById('goNewRecord').classList.add('hidden');
@@ -2183,7 +2830,7 @@
         const rk = document.getElementById('goRanking');
         rk.classList.remove('hidden');
         rk.style.animation = 'none'; rk.offsetHeight; rk.style.animation = '';
-        document.getElementById('btnRestart').classList.remove('hidden');
+        // btnRestart hidden - restart disabled for arcade coin control
         newRankIdx = -1;
     }
 
@@ -2344,6 +2991,61 @@
     }
 
     function update(delta) {
+        // Invincibility timer + blink
+        if (invincibleTimer > 0) {
+            invincibleTimer -= delta;
+            playerCar.visible = Math.floor(invincibleTimer * 8) % 2 === 0;
+            if (invincibleTimer <= 0) {
+                invincibleTimer = 0;
+                playerCar.visible = true;
+            }
+        }
+
+        // Hit spin animation (car flips like crash but recovers)
+        if (hitSpinTimer > 0) {
+            hitSpinTimer -= delta;
+
+            // Gravity
+            hitVel.y -= 22 * delta;
+
+            // Move car
+            playerCar.position.x += hitVel.x * delta;
+            playerCar.position.y += hitVel.y * delta;
+            playerCar.position.z += hitVel.z * delta;
+
+            // Bounce off ground
+            if (playerCar.position.y < 0) {
+                playerCar.position.y = 0;
+                hitVel.y = Math.abs(hitVel.y) * 0.2;
+                hitVel.x *= 0.5;
+                hitVel.z *= 0.5;
+            }
+
+            // Tumble
+            playerCar.rotation.x += hitRotVel.x * delta;
+            playerCar.rotation.y += hitRotVel.y * delta;
+            playerCar.rotation.z += hitRotVel.z * delta;
+
+            // Dampen rotation
+            hitRotVel.x *= 0.98;
+            hitRotVel.y *= 0.98;
+            hitRotVel.z *= 0.98;
+
+            if (hitSpinTimer <= 0) {
+                hitSpinTimer = 0;
+                playerCar.position.y = 0;
+                playerCar.rotation.set(0, 0, 0);
+                // Snap back to nearest lane
+                let closest = 0, minD = 999;
+                for (let i = 0; i < LANE_POSITIONS.length; i++) {
+                    const d = Math.abs(playerCar.position.x - LANE_POSITIONS[i]);
+                    if (d < minD) { minD = d; closest = i; }
+                }
+                currentLane = closest;
+                targetX = LANE_POSITIONS[closest];
+            }
+        }
+
         // Increase base speed
         speed = Math.min(MAX_SPEED, speed + SPEED_INCREASE * delta);
 
@@ -2367,25 +3069,29 @@
         // (coins are main score source)
 
         // Move player to target lane (smooth)
-        playerCar.position.x += (targetX - playerCar.position.x) * 0.12;
+        if (hitSpinTimer <= 0) {
+            playerCar.position.x += (targetX - playerCar.position.x) * 0.12;
+        }
 
-        // Jump / Bomb jump physics
-        if (bombJumpVel !== 0 || playerCar.position.y > 0.01) {
-            playerCar.position.y += bombJumpVel * delta;
-            bombJumpVel -= JUMP_GRAVITY * delta;
-            if (playerCar.position.y <= 0) {
-                playerCar.position.y = 0;
-                if (Math.abs(bombJumpVel) > 2) {
-                    bombJumpVel = -bombJumpVel * 0.2; // small bounce
-                } else {
-                    bombJumpVel = 0;
-                    isJumping = false;
+        // Jump / Bomb jump physics (skip during hit spin)
+        if (hitSpinTimer <= 0) {
+            if (bombJumpVel !== 0 || playerCar.position.y > 0.01) {
+                playerCar.position.y += bombJumpVel * delta;
+                bombJumpVel -= JUMP_GRAVITY * delta;
+                if (playerCar.position.y <= 0) {
+                    playerCar.position.y = 0;
+                    if (Math.abs(bombJumpVel) > 2) {
+                        bombJumpVel = -bombJumpVel * 0.2; // small bounce
+                    } else {
+                        bombJumpVel = 0;
+                        isJumping = false;
+                    }
                 }
+                // Tilt car nose up while rising, nose down while falling
+                playerCar.rotation.x = -bombJumpVel * 0.012;
+            } else {
+                playerCar.rotation.x = 0;
             }
-            // Tilt car nose up while rising, nose down while falling
-            playerCar.rotation.x = -bombJumpVel * 0.012;
-        } else {
-            playerCar.rotation.x = 0;
         }
 
         // Jump shadow
@@ -2421,10 +3127,12 @@
             }
         }
 
-        // Car tilt when turning
-        const targetTilt = (targetX - playerCar.position.x) * -0.15;
-        tiltAngle += (targetTilt - tiltAngle) * 0.1;
-        playerCar.rotation.z = tiltAngle;
+        // Car tilt when turning (skip during hit spin)
+        if (hitSpinTimer <= 0) {
+            const targetTilt = (targetX - playerCar.position.x) * -0.15;
+            tiltAngle += (targetTilt - tiltAngle) * 0.1;
+            playerCar.rotation.z = tiltAngle;
+        }
 
         // Camera follow (subtle)
         camera.position.x += (playerCar.position.x * 0.35 - camera.position.x) * 0.06;
@@ -2506,6 +3214,9 @@
             updateBoss(delta, moveDist);
         }
 
+        // Missile system
+        updateMissile(delta);
+
         // Collisions
         checkCollisions();
     }
@@ -2531,7 +3242,7 @@
 
         // Button events
         document.getElementById('btnStart').addEventListener('click', startGame);
-        document.getElementById('btnRestart').addEventListener('click', startGame);
+        // btnRestart disabled for arcade coin control
 
         // Global keydown: name entry + start/restart
         document.addEventListener('keydown', (e) => {
@@ -2547,7 +3258,7 @@
             }
             if (e.key === ' ' || e.key === 'Enter') {
                 if (gameState === 'menu') { startGame(); }
-                else if (gameState === 'gameover' && gameOverPhase === 'ranking') { startGame(); }
+                // restart disabled for arcade coin control
             }
         });
 

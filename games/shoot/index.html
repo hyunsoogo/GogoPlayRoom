@@ -1789,7 +1789,7 @@ function drawVictoryScreen() {
     if (blink) {
       ctx.fillStyle = '#FFF';
       ctx.font = '16px monospace';
-      ctx.fillText('PRESS Z TO PLAY AGAIN', W / 2, H / 2 + 160);
+      ctx.fillText('PRESS ESC TO EXIT', W / 2, H / 2 + 160);
     }
   }
 
@@ -1819,7 +1819,7 @@ function drawGameOver() {
   if (blink) {
     ctx.fillStyle = '#FFF';
     ctx.font = '16px monospace';
-    ctx.fillText('PRESS Z TO RETRY', W / 2, H / 2 + 100);
+    ctx.fillText('PRESS ESC TO EXIT', W / 2, H / 2 + 100);
   }
 }
 
@@ -1925,18 +1925,8 @@ function gameLoop() {
     }
   } else if (state === 'victory') {
     drawVictoryScreen();
-    if (stageClearTimer < 120 && (justPressed['KeyZ'] || justPressed['Space'])) {
-      state = 'title';
-      stage = 1;
-      score = 0;
-    }
   } else if (state === 'gameOver') {
     drawGameOver();
-    if (justPressed['KeyZ'] || justPressed['Space']) {
-      startGame();
-      state = 'stageIntro';
-      stageClearTimer = 120;
-    }
   }
 
   clearJustPressed();

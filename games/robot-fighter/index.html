@@ -155,6 +155,30 @@
             100% { opacity: 0; transform: translateY(-60px); }
         }
 
+        #ending-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.92); z-index: 400;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
+        }
+        #ending-screen h1 {
+            font-size: 52px; color: #ffd700;
+            text-shadow: 0 0 30px #ffd700, 0 0 60px #ff8c00;
+            margin-bottom: 20px;
+        }
+        .ending-sub {
+            font-size: 28px; color: #0ff;
+            text-shadow: 0 0 20px #0ff;
+            margin-bottom: 30px;
+        }
+        .ending-stats {
+            font-size: 18px; color: #aaa; line-height: 2;
+        }
+        .ending-hint {
+            margin-top: 40px; font-size: 16px; color: #888;
+            animation: bossFlash 1s infinite;
+        }
+
         #minimap {
             position: fixed; bottom: 20px; right: 250px;
             width: 150px; height: 150px;
@@ -220,7 +244,14 @@
 
 <div id="game-over">
     GAME OVER
-    <span>Enter키를 눌러 다시 시작</span>
+    <span>ESC키를 눌러 나가기</span>
+</div>
+
+<div id="ending-screen">
+    <h1>🎉 축하합니다! 🎉</h1>
+    <p class="ending-sub">우주를 구했습니다!</p>
+    <p class="ending-stats" id="ending-stats"></p>
+    <p class="ending-hint">ESC키를 눌러 나가기</p>
 </div>
 
 <canvas id="minimap"></canvas>
@@ -1496,6 +1527,7 @@ function initGame() {
     updateHUD();
     document.getElementById('game-over').style.display = 'none';
     document.getElementById('upgrade-panel').style.display = 'none';
+    document.getElementById('ending-screen').style.display = 'none';
 }
 
 // ============================================================
@@ -1513,10 +1545,7 @@ document.addEventListener('keydown', e => {
 
     if (!G.running && !G.gameOver) return;
 
-    if (G.gameOver && e.code === 'Enter') {
-        SFX.startBGM();
-        initGame(); G.running = true; return;
-    }
+    if (G.gameOver) return;
 
     if (e.code === 'Digit1') buyUnit('soldier');
     if (e.code === 'Digit2') buyUnit('tank');
@@ -1811,6 +1840,10 @@ function upgradeWeapon(type) {
 }
 
 function nextStage() {
+    if (G.stage >= 15) {
+        showEnding();
+        return;
+    }
     G.stage++;
     G.kills = 0;
     G.killsNeeded = 15 + G.stage * 5;
@@ -1819,6 +1852,19 @@ function nextStage() {
     G.spawnInterval = Math.max(800, 2000 - G.stage * 100);
     G.running = true;
     updateHUD();
+}
+
+function showEnding() {
+    G.running = false;
+    G.gameOver = true;
+    SFX.stopBGM();
+    SFX.stageClear();
+    const el = document.getElementById('ending-screen');
+    document.getElementById('ending-stats').innerHTML =
+        `클리어 스테이지: ${G.stage}<br>` +
+        `레이저 총 Lv.${G.gunLevel} | 카타나 Lv.${G.swordLevel}<br>` +
+        `보유 코인: ${G.coins}`;
+    el.style.display = 'flex';
 }
 
 // ============================================================
