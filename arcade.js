@@ -82,6 +82,165 @@ function playErrorSound() {
   osc.stop(audioCtx.currentTime + 0.3);
 }
 
+// ===== Arcade BGM =====
+let bgmStarted = false;
+let bgmInterval = null;
+let bgmPadNodes = [];
+let bgmGain = null;
+let bgmBeat = 0;
+
+function startArcadeBGM() {
+  if (bgmStarted) return;
+  bgmStarted = true;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  bgmGain = audioCtx.createGain();
+  bgmGain.gain.value = 0.12;
+  bgmGain.connect(audioCtx.destination);
+
+  // Warm ambient pad (arcade hum)
+  const padGain = audioCtx.createGain();
+  padGain.gain.value = 0.04;
+  padGain.connect(bgmGain);
+  [130.81, 164.81, 196.00, 261.63].forEach(freq => { // C3 E3 G3 C4
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    osc.connect(padGain);
+    osc.start();
+    bgmPadNodes.push(osc);
+  });
+  bgmPadNodes.push(padGain);
+
+  const BPM = 120;
+  const beatMs = (60 / BPM) * 1000;
+
+  // Funky arcade melody - pentatonic scale for that retro feel
+  const melodyNotes = [
+    523.25, 0, 659.25, 0, 783.99, 659.25, 0, 523.25,
+    587.33, 0, 783.99, 0, 1046.5, 783.99, 0, 659.25,
+    523.25, 659.25, 783.99, 1046.5, 783.99, 659.25, 523.25, 0,
+    440.00, 523.25, 587.33, 659.25, 523.25, 0, 440.00, 0
+  ];
+
+  const bassNotes = [
+    130.81, 0, 130.81, 0, 146.83, 0, 146.83, 0,  // C3 D3
+    164.81, 0, 164.81, 0, 130.81, 0, 196.00, 0,  // E3 C3 G3
+    174.61, 0, 174.61, 0, 146.83, 0, 146.83, 0,  // F3 D3
+    130.81, 0, 196.00, 0, 164.81, 0, 130.81, 0   // C3 G3 E3 C3
+  ];
+
+  bgmInterval = setInterval(() => {
+    if (!bgmGain) return;
+    const now = audioCtx.currentTime;
+    const idx = bgmBeat % 32;
+
+    // Kick on 0, 4, 8... (every 4 beats)
+    if (idx % 4 === 0) {
+      const kick = audioCtx.createOscillator();
+      const kGain = audioCtx.createGain();
+      kick.type = 'sine';
+      kick.frequency.setValueAtTime(120, now);
+      kick.frequency.exponentialRampToValueAtTime(35, now + 0.08);
+      kGain.gain.setValueAtTime(0.18, now);
+      kGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      kick.connect(kGain);
+      kGain.connect(bgmGain);
+      kick.start(now);
+      kick.stop(now + 0.15);
+    }
+
+    // Hi-hat every beat
+    const hatBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.03, audioCtx.sampleRate);
+    const hatData = hatBuf.getChannelData(0);
+    for (let i = 0; i < hatData.length; i++) hatData[i] = (Math.random() * 2 - 1) * 0.2;
+    const hatSrc = audioCtx.createBufferSource();
+    hatSrc.buffer = hatBuf;
+    const hatGain = audioCtx.createGain();
+    hatGain.gain.setValueAtTime(idx % 2 === 0 ? 0.06 : 0.03, now);
+    hatGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+    hatSrc.connect(hatGain);
+    hatGain.connect(bgmGain);
+    hatSrc.start(now);
+
+    // Snare on 2, 6, 10... (offbeat)
+    if (idx % 4 === 2) {
+      const sBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.08, audioCtx.sampleRate);
+      const sData = sBuf.getChannelData(0);
+      for (let i = 0; i < sData.length; i++) sData[i] = (Math.random() * 2 - 1);
+      const sSrc = audioCtx.createBufferSource();
+      sSrc.buffer = sBuf;
+      const sGain = audioCtx.createGain();
+      sGain.gain.setValueAtTime(0.07, now);
+      sGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      sSrc.connect(sGain);
+      sGain.connect(bgmGain);
+      sSrc.start(now);
+    }
+
+    // Bass line
+    const bassFreq = bassNotes[idx];
+    if (bassFreq > 0) {
+      const bass = audioCtx.createOscillator();
+      const bGain = audioCtx.createGain();
+      bass.type = 'sawtooth';
+      bass.frequency.value = bassFreq;
+      bGain.gain.setValueAtTime(0.08, now);
+      bGain.gain.exponentialRampToValueAtTime(0.001, now + beatMs / 1200);
+      bass.connect(bGain);
+      bGain.connect(bgmGain);
+      bass.start(now);
+      bass.stop(now + beatMs / 1100);
+    }
+
+    // Melody (every 2 beats)
+    if (idx % 2 === 0) {
+      const melFreq = melodyNotes[idx];
+      if (melFreq > 0) {
+        const mel = audioCtx.createOscillator();
+        const mGain = audioCtx.createGain();
+        mel.type = 'square';
+        mel.frequency.value = melFreq;
+        mGain.gain.setValueAtTime(0.025, now);
+        mGain.gain.setValueAtTime(0.025, now + beatMs / 600);
+        mGain.gain.exponentialRampToValueAtTime(0.001, now + beatMs / 400);
+        mel.connect(mGain);
+        mGain.connect(bgmGain);
+        mel.start(now);
+        mel.stop(now + beatMs / 350);
+      }
+    }
+
+    // Arpeggio sparkle (random chiptune bleeps)
+    if (Math.random() < 0.15) {
+      const arpFreqs = [1046.5, 1318.5, 1568.0, 2093.0];
+      const arp = audioCtx.createOscillator();
+      const aGain = audioCtx.createGain();
+      arp.type = 'square';
+      arp.frequency.value = arpFreqs[Math.floor(Math.random() * arpFreqs.length)];
+      aGain.gain.setValueAtTime(0.015, now);
+      aGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      arp.connect(aGain);
+      aGain.connect(bgmGain);
+      arp.start(now);
+      arp.stop(now + 0.1);
+    }
+
+    bgmBeat++;
+  }, beatMs);
+}
+
+function stopArcadeBGM() {
+  bgmStarted = false;
+  if (bgmInterval) { clearInterval(bgmInterval); bgmInterval = null; }
+  bgmPadNodes.forEach(n => { try { n.stop(); } catch(e) {} try { n.disconnect(); } catch(e) {} });
+  bgmPadNodes = [];
+  if (bgmGain) { try { bgmGain.disconnect(); } catch(e) {} bgmGain = null; }
+}
+
+// Start BGM on first user interaction
+document.addEventListener('click', () => { startArcadeBGM(); }, { once: true });
+
 // ===== Three.js Scene Setup =====
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a3a5c);
@@ -714,6 +873,7 @@ function launchGame(game, cabinet) {
 }
 
 function launchGameFullscreen(game) {
+  stopArcadeBGM();
   gameViewport.classList.remove('hidden', 'zoom-from');
   gameViewport.classList.add('zoom-to');
   gameLoading.classList.remove('hidden');
@@ -733,6 +893,7 @@ function exitGame() {
   gameViewport.classList.add('hidden');
   gameViewport.classList.remove('zoom-to', 'zoom-from');
   gameLoading.classList.remove('hidden');
+  startArcadeBGM();
 }
 
 exitBtn.addEventListener('click', exitGame);
