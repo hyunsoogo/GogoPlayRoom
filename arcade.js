@@ -95,12 +95,12 @@ function startArcadeBGM() {
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
   bgmGain = audioCtx.createGain();
-  bgmGain.gain.value = 0.12;
+  bgmGain.gain.value = 0.5;
   bgmGain.connect(audioCtx.destination);
 
   // Warm ambient pad (arcade hum)
   const padGain = audioCtx.createGain();
-  padGain.gain.value = 0.04;
+  padGain.gain.value = 0.03;
   padGain.connect(bgmGain);
   [130.81, 164.81, 196.00, 261.63].forEach(freq => { // C3 E3 G3 C4
     const osc = audioCtx.createOscillator();
@@ -142,8 +142,8 @@ function startArcadeBGM() {
       kick.type = 'sine';
       kick.frequency.setValueAtTime(120, now);
       kick.frequency.exponentialRampToValueAtTime(35, now + 0.08);
-      kGain.gain.setValueAtTime(0.18, now);
-      kGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      kGain.gain.setValueAtTime(0.35, now);
+      kGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
       kick.connect(kGain);
       kGain.connect(bgmGain);
       kick.start(now);
@@ -157,7 +157,7 @@ function startArcadeBGM() {
     const hatSrc = audioCtx.createBufferSource();
     hatSrc.buffer = hatBuf;
     const hatGain = audioCtx.createGain();
-    hatGain.gain.setValueAtTime(idx % 2 === 0 ? 0.06 : 0.03, now);
+    hatGain.gain.setValueAtTime(idx % 2 === 0 ? 0.12 : 0.06, now);
     hatGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
     hatSrc.connect(hatGain);
     hatGain.connect(bgmGain);
@@ -171,8 +171,8 @@ function startArcadeBGM() {
       const sSrc = audioCtx.createBufferSource();
       sSrc.buffer = sBuf;
       const sGain = audioCtx.createGain();
-      sGain.gain.setValueAtTime(0.07, now);
-      sGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      sGain.gain.setValueAtTime(0.15, now);
+      sGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
       sSrc.connect(sGain);
       sGain.connect(bgmGain);
       sSrc.start(now);
@@ -185,12 +185,12 @@ function startArcadeBGM() {
       const bGain = audioCtx.createGain();
       bass.type = 'sawtooth';
       bass.frequency.value = bassFreq;
-      bGain.gain.setValueAtTime(0.08, now);
-      bGain.gain.exponentialRampToValueAtTime(0.001, now + beatMs / 1200);
+      bGain.gain.setValueAtTime(0.2, now);
+      bGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
       bass.connect(bGain);
       bGain.connect(bgmGain);
       bass.start(now);
-      bass.stop(now + beatMs / 1100);
+      bass.stop(now + 0.35);
     }
 
     // Melody (every 2 beats)
@@ -201,13 +201,12 @@ function startArcadeBGM() {
         const mGain = audioCtx.createGain();
         mel.type = 'square';
         mel.frequency.value = melFreq;
-        mGain.gain.setValueAtTime(0.025, now);
-        mGain.gain.setValueAtTime(0.025, now + beatMs / 600);
-        mGain.gain.exponentialRampToValueAtTime(0.001, now + beatMs / 400);
+        mGain.gain.setValueAtTime(0.08, now);
+        mGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         mel.connect(mGain);
         mGain.connect(bgmGain);
         mel.start(now);
-        mel.stop(now + beatMs / 350);
+        mel.stop(now + 0.3);
       }
     }
 
@@ -218,8 +217,8 @@ function startArcadeBGM() {
       const aGain = audioCtx.createGain();
       arp.type = 'square';
       arp.frequency.value = arpFreqs[Math.floor(Math.random() * arpFreqs.length)];
-      aGain.gain.setValueAtTime(0.015, now);
-      aGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      aGain.gain.setValueAtTime(0.04, now);
+      aGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
       arp.connect(aGain);
       aGain.connect(bgmGain);
       arp.start(now);
@@ -230,24 +229,33 @@ function startArcadeBGM() {
   }, beatMs);
 }
 
+let bgmSuppressed = false;
+
 function stopArcadeBGM() {
   bgmStarted = false;
+  bgmSuppressed = true;
   if (bgmInterval) { clearInterval(bgmInterval); bgmInterval = null; }
   bgmPadNodes.forEach(n => { try { n.stop(); } catch(e) {} try { n.disconnect(); } catch(e) {} });
   bgmPadNodes = [];
   if (bgmGain) { try { bgmGain.disconnect(); } catch(e) {} bgmGain = null; }
 }
 
-// Start BGM on user interaction (retry until audioCtx is running)
+// Start BGM as early as possible
 function tryStartBGM() {
+  if (bgmSuppressed) return;
   if (audioCtx.state === 'suspended') {
-    audioCtx.resume().then(() => startArcadeBGM());
+    audioCtx.resume().then(() => { if (!bgmSuppressed) startArcadeBGM(); });
   } else {
     startArcadeBGM();
   }
 }
+// Try immediately on load
+tryStartBGM();
+// Fallback: if browser blocked autoplay, start on first interaction
 document.addEventListener('click', tryStartBGM);
 document.addEventListener('keydown', tryStartBGM);
+document.addEventListener('touchstart', tryStartBGM);
+document.addEventListener('mousemove', tryStartBGM, { once: true });
 
 // ===== Three.js Scene Setup =====
 const scene = new THREE.Scene();
@@ -823,6 +831,7 @@ function handleCoinInsert3D(game, cabinet) {
 
 // ===== Launch Game =====
 function launchGame(game, cabinet) {
+  stopArcadeBGM();
   // Find screen mesh world position and project to screen coords
   let screenMesh = null;
   cabinet.traverse((child) => {
@@ -901,6 +910,7 @@ function exitGame() {
   gameViewport.classList.add('hidden');
   gameViewport.classList.remove('zoom-to', 'zoom-from');
   gameLoading.classList.remove('hidden');
+  bgmSuppressed = false;
   startArcadeBGM();
 }
 

@@ -1876,17 +1876,27 @@ function startSwordSwing() {
 
 function createSlashArc() {
     // Visual arc effect - front 270 degrees (exclude behind)
+    // RingGeometry in XY plane: after rotation.x = -PI/2, angle 3PI/2 = +Z (forward)
+    // Gap at angle PI/2 = -Z (backward). Arc from 3PI/4 covering 3PI/2 (270°).
     const arcGeo = new THREE.RingGeometry(2, 8, 24, 1, Math.PI * 0.75, Math.PI * 1.5);
     const arcMat = new THREE.MeshBasicMaterial({
         color: 0x00ccff, transparent: true, opacity: 0.5, side: THREE.DoubleSide
     });
     const arc = new THREE.Mesh(arcGeo, arcMat);
-    arc.rotation.x = -Math.PI / 2;
-    arc.rotation.z = -player.rotation.y;
-    arc.position.set(player.position.x, 1.5, player.position.z);
-    scene.add(arc);
+    arc.rotation.x = -Math.PI / 2; // lay flat on XZ plane
+
+    // Use a group so rotation.y (facing) is applied independently of arc's rotation.x
+    const group = new THREE.Group();
+    group.position.set(player.position.x, 1.5, player.position.z);
+    group.rotation.y = player.rotation.y;
+    group.add(arc);
+    scene.add(group);
+
+    // Give group a fake material reference for the particle system's opacity fade
+    group.material = arcMat;
+
     G.particles.push({
-        mesh: arc,
+        mesh: group,
         vel: new THREE.Vector3(0, 0, 0),
         life: 40
     });
