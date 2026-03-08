@@ -3042,6 +3042,7 @@
             if (hitSpinTimer <= 0) {
                 hitSpinTimer = 0;
                 playerCar.position.y = 0;
+                playerCar.position.z = 0;
                 playerCar.rotation.set(0, 0, 0);
                 // Snap back to nearest lane
                 let closest = 0, minD = 999;
