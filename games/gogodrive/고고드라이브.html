@@ -2800,6 +2800,14 @@
         rankings.splice(newRankIdx, 0, { name, score });
         if (rankings.length > 10) rankings.length = 10;
         saveRankings();
+        // 통합 리더보드에도 저장
+        try {
+            let all = JSON.parse(localStorage.getItem('gogo_arcade_leaderboard') || '[]');
+            all.push({ name, score, game: '고고드라이브', date: new Date().toISOString().slice(0,10) });
+            all.sort((a,b) => b.score - a.score);
+            if (all.length > 30) all.length = 30;
+            localStorage.setItem('gogo_arcade_leaderboard', JSON.stringify(all));
+        } catch(e) {}
         document.getElementById('goNewRecord').classList.add('hidden');
         showRanking();
         playSound('coin');

@@ -117,6 +117,73 @@
         }
         #game-over span { display: block; font-size: 20px; color: #fff; margin-top: 15px; }
 
+        /* Leaderboard / Name Entry */
+        .go-phase.hidden { display: none; }
+        @keyframes nrFlash {
+            0%, 100% { color: #FFD700; text-shadow: 0 0 10px #FFD700, 0 0 30px #FF8800; }
+            50% { color: #fff; text-shadow: 0 0 20px #FFD700, 0 0 50px #FF8800, 0 0 80px #FF4400; }
+        }
+        @keyframes ncBlink { 50% { border-color: transparent; } }
+        @keyframes goRankIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes rkHL { 50% { background: rgba(255,215,0,0.22); } }
+        .name-slot { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .name-arr {
+            background: none; border: none; color: rgba(255,255,255,0.5);
+            font-size: 18px; cursor: pointer; padding: 2px 10px; line-height: 1;
+            pointer-events: all;
+        }
+        .name-arr:hover { color: #FFD700; }
+        .name-arr:active { transform: scale(0.85); }
+        .name-char {
+            width: 48px; height: 54px; display: flex; align-items: center; justify-content: center;
+            font-size: 34px; font-weight: 900; font-family: 'Courier New', monospace;
+            color: #FFD700; background: rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,215,0,0.25); border-radius: 8px;
+            text-shadow: 0 0 8px rgba(255,215,0,0.5);
+        }
+        .name-char.active {
+            border-color: #FFD700; background: rgba(255,215,0,0.1);
+            animation: ncBlink 0.5s step-end infinite;
+        }
+        .btn-name-ok {
+            margin-top: 10px; padding: 8px 36px; font-size: 18px; font-weight: bold;
+            background: linear-gradient(180deg, #FFB800, #E08900);
+            box-shadow: 0 4px 0 #AA6600; border: none; border-radius: 30px;
+            color: #fff; cursor: pointer; pointer-events: all;
+        }
+        .btn-name-ok:active { transform: translateY(2px); box-shadow: 0 2px 0 #AA6600; }
+        .rf-ranking {
+            width: 100%; margin-top: 14px;
+            animation: goRankIn 0.4s ease-out both;
+        }
+        .rank-row {
+            display: flex; padding: 7px 14px; border-radius: 6px;
+            margin-bottom: 2px; font-size: 14px; font-weight: bold; align-items: center;
+        }
+        .rank-row.header {
+            color: rgba(255,255,255,0.35); font-size: 10px;
+            letter-spacing: 1px; margin-bottom: 4px; padding-bottom: 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .rank-row.current {
+            background: rgba(255,215,0,0.12);
+            animation: rkHL 1s ease-in-out infinite;
+            border: 1px solid rgba(255,215,0,0.25);
+        }
+        .rank-pos {
+            width: 36px; font-family: 'Courier New', monospace; color: #888;
+        }
+        .rank-row:nth-child(2) .rank-pos { color: #FFD700; }
+        .rank-row:nth-child(3) .rank-pos { color: #C0C0C0; }
+        .rank-row:nth-child(4) .rank-pos { color: #CD7F32; }
+        .rank-name { flex: 1; color: #fff; font-family: 'Courier New', monospace; letter-spacing: 3px; }
+        .rank-score { width: 80px; text-align: right; color: #FFD700; }
+        .rank-game { width: 80px; text-align: right; color: #aaa; font-size: 11px; }
+        .rank-you { color: #00DDFF; font-size: 10px; margin-left: 6px; white-space: nowrap; }
+
         #start-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); z-index: 500;
@@ -247,11 +314,72 @@
     <span>ESC키를 눌러 나가기</span>
 </div>
 
+<div id="nameEntryOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:350;display:none;align-items:center;justify-content:center;flex-direction:column;">
+    <div style="max-width:420px;width:92%;text-align:center;">
+        <div style="font-size:38px;font-weight:900;color:#FF3333;text-shadow:0 0 20px rgba(255,0,0,0.6);margin-bottom:15px;">GAME OVER</div>
+        <div style="font-size:24px;color:#FFD700;margin-bottom:20px;" id="rfFinalScore">SCORE: 0</div>
+        <div id="rfNewRecord" class="go-phase">
+            <div id="rfNewRecordTitle" style="font-size:26px;font-weight:900;margin-bottom:14px;animation:nrFlash 0.6s ease-in-out infinite;">&#9733; NEW RECORD &#9733;</div>
+            <div id="rfNameRow" style="display:flex;gap:8px;justify-content:center;margin-bottom:6px;">
+                <div class="name-slot">
+                    <button class="name-arr" onclick="rfNameCharChange(0,1)">&#9650;</button>
+                    <div class="name-char active" id="rfnc0">A</div>
+                    <button class="name-arr" onclick="rfNameCharChange(0,-1)">&#9660;</button>
+                </div>
+                <div class="name-slot">
+                    <button class="name-arr" onclick="rfNameCharChange(1,1)">&#9650;</button>
+                    <div class="name-char" id="rfnc1">A</div>
+                    <button class="name-arr" onclick="rfNameCharChange(1,-1)">&#9660;</button>
+                </div>
+                <div class="name-slot">
+                    <button class="name-arr" onclick="rfNameCharChange(2,1)">&#9650;</button>
+                    <div class="name-char" id="rfnc2">A</div>
+                    <button class="name-arr" onclick="rfNameCharChange(2,-1)">&#9660;</button>
+                </div>
+            </div>
+            <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:4px;">&#8593;&#8595; &#48320;&#44221; &nbsp; &#8592;&#8594; &#51060;&#46041; &nbsp; ENTER &#54869;&#51064;</div>
+            <button class="btn-name-ok" onclick="rfConfirmName()">OK</button>
+        </div>
+        <div id="rfRanking" class="go-phase hidden rf-ranking">
+            <div style="text-align:center;font-size:18px;font-weight:900;color:#FFD700;letter-spacing:4px;margin-bottom:10px;text-shadow:0 0 10px rgba(255,215,0,0.3);">&#127942; RANKING &#127942;</div>
+            <div id="rfRankList"></div>
+            <div style="margin-top:14px;color:rgba(255,255,255,0.4);font-size:12px;">ESC&#53412;&#47484; &#45580;&#47084; &#45208;&#44032;&#44592;</div>
+        </div>
+    </div>
+</div>
+
 <div id="ending-screen">
     <h1>🎉 축하합니다! 🎉</h1>
     <p class="ending-sub">우주를 구했습니다!</p>
     <p class="ending-stats" id="ending-stats"></p>
     <p class="ending-hint">ESC키를 눌러 나가기</p>
+    <div style="font-size:24px;color:#FFD700;margin-top:10px;" id="endFinalScore">SCORE: 0</div>
+    <div id="endNewRecord" class="go-phase hidden" style="margin-top:20px;">
+        <div style="font-size:26px;font-weight:900;margin-bottom:14px;animation:nrFlash 0.6s ease-in-out infinite;">&#9733; NEW RECORD &#9733;</div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-bottom:6px;">
+            <div class="name-slot">
+                <button class="name-arr" onclick="rfNameCharChange(0,1)">&#9650;</button>
+                <div class="name-char active" id="endnc0">A</div>
+                <button class="name-arr" onclick="rfNameCharChange(0,-1)">&#9660;</button>
+            </div>
+            <div class="name-slot">
+                <button class="name-arr" onclick="rfNameCharChange(1,1)">&#9650;</button>
+                <div class="name-char" id="endnc1">A</div>
+                <button class="name-arr" onclick="rfNameCharChange(1,-1)">&#9660;</button>
+            </div>
+            <div class="name-slot">
+                <button class="name-arr" onclick="rfNameCharChange(2,1)">&#9650;</button>
+                <div class="name-char" id="endnc2">A</div>
+                <button class="name-arr" onclick="rfNameCharChange(2,-1)">&#9660;</button>
+            </div>
+        </div>
+        <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:4px;">&#8593;&#8595; &#48320;&#44221; &nbsp; &#8592;&#8594; &#51060;&#46041; &nbsp; ENTER &#54869;&#51064;</div>
+        <button class="btn-name-ok" onclick="rfConfirmName()">OK</button>
+    </div>
+    <div id="endRanking" class="go-phase hidden rf-ranking" style="margin-top:14px;">
+        <div style="text-align:center;font-size:18px;font-weight:900;color:#FFD700;letter-spacing:4px;margin-bottom:10px;text-shadow:0 0 10px rgba(255,215,0,0.3);">&#127942; RANKING &#127942;</div>
+        <div id="endRankList"></div>
+    </div>
 </div>
 
 <canvas id="minimap"></canvas>
@@ -1485,6 +1613,147 @@ const playerDirection = new THREE.Vector3();
 const cameraHeight = 25;
 const cameraOffsetZ = 25;
 
+// ============================================================
+// Leaderboard / Name Entry System
+// ============================================================
+const RF_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+let rfRankings = [];
+let rfNameChars = [0, 0, 0];
+let rfNamePos = 0;
+let rfNewRankIdx = -1;
+let rfGameOverPhase = ''; // '', 'nameEntry', 'ranking'
+let rfFinalScore = 0;
+let rfActiveContext = 'overlay'; // 'overlay' or 'ending'
+
+function rfLoadRankings() {
+    try {
+        rfRankings = JSON.parse(localStorage.getItem('gogo_arcade_leaderboard') || '[]');
+    } catch(e) { rfRankings = []; }
+}
+
+function rfSaveRanking(name, score) {
+    try {
+        let all = JSON.parse(localStorage.getItem('gogo_arcade_leaderboard') || '[]');
+        all.push({ name, score, game: '로봇파이터', date: new Date().toISOString().slice(0,10) });
+        all.sort((a,b) => b.score - a.score);
+        if (all.length > 30) all.length = 30;
+        localStorage.setItem('gogo_arcade_leaderboard', JSON.stringify(all));
+        rfRankings = all;
+    } catch(e) {}
+}
+
+function rfGetRankPosition(s) {
+    rfLoadRankings();
+    for (let i = 0; i < rfRankings.length; i++) { if (s > rfRankings[i].score) return i; }
+    return rfRankings.length < 30 ? rfRankings.length : -1;
+}
+
+function rfCalcScore() {
+    return G.stage * 1000 + G.kills * 100 + G.coins;
+}
+
+function rfShowNameEntry(recordDivId, ncPrefix) {
+    rfGameOverPhase = 'nameEntry';
+    rfNameChars = [0, 0, 0];
+    rfNamePos = 0;
+    document.getElementById(recordDivId).classList.remove('hidden');
+    rfUpdateNameDisplay(ncPrefix);
+}
+
+function rfUpdateNameDisplay(ncPrefix) {
+    for (let i = 0; i < 3; i++) {
+        const el = document.getElementById(ncPrefix + i);
+        if (!el) continue;
+        el.textContent = RF_ALPHABET[rfNameChars[i]];
+        el.classList.toggle('active', i === rfNamePos);
+    }
+}
+
+function rfGetNcPrefix() {
+    return rfActiveContext === 'overlay' ? 'rfnc' : 'endnc';
+}
+
+window.rfNameCharChange = function(pos, dir) {
+    if (rfGameOverPhase !== 'nameEntry') return;
+    rfNamePos = pos;
+    rfNameChars[pos] = (rfNameChars[pos] + dir + RF_ALPHABET.length) % RF_ALPHABET.length;
+    rfUpdateNameDisplay(rfGetNcPrefix());
+};
+
+window.rfConfirmName = function() {
+    if (rfGameOverPhase !== 'nameEntry') return;
+    const name = rfNameChars.map(i => RF_ALPHABET[i]).join('');
+    rfSaveRanking(name, rfFinalScore);
+    rfGameOverPhase = 'ranking';
+    if (rfActiveContext === 'overlay') {
+        document.getElementById('rfNewRecord').classList.add('hidden');
+        rfShowRanking('rfRankList', 'rfRanking');
+    } else {
+        document.getElementById('endNewRecord').classList.add('hidden');
+        rfShowRanking('endRankList', 'endRanking');
+    }
+};
+
+function rfShowRanking(listId, divId) {
+    rfGameOverPhase = 'ranking';
+    rfLoadRankings();
+    const list = document.getElementById(listId);
+    const ordinals = ['1ST','2ND','3RD','4TH','5TH','6TH','7TH','8TH','9TH','10TH'];
+    let html = '<div class="rank-row header"><span class="rank-pos">RANK</span><span class="rank-name">NAME</span><span class="rank-score">SCORE</span><span class="rank-game">GAME</span></div>';
+    const display = rfRankings.slice(0, 10);
+    if (display.length === 0) {
+        html += '<div style="text-align:center;color:#666;padding:16px;font-size:13px;">기록 없음</div>';
+    }
+    display.forEach((r, i) => {
+        const isCurrent = (i === rfNewRankIdx && r.score === rfFinalScore);
+        html += '<div class="rank-row' + (isCurrent ? ' current' : '') + '">';
+        html += '<span class="rank-pos">' + ordinals[i] + '</span>';
+        html += '<span class="rank-name">' + r.name + '</span>';
+        html += '<span class="rank-score">' + r.score.toLocaleString() + '</span>';
+        html += '<span class="rank-game">' + (r.game || '') + '</span>';
+        if (isCurrent) html += '<span class="rank-you">◀ YOU</span>';
+        html += '</div>';
+    });
+    list.innerHTML = html;
+    document.getElementById(divId).classList.remove('hidden');
+    rfNewRankIdx = -1;
+}
+
+function rfStartGameOverSequence() {
+    rfFinalScore = rfCalcScore();
+    setTimeout(() => {
+        document.getElementById('game-over').style.display = 'none';
+        rfNewRankIdx = rfGetRankPosition(rfFinalScore);
+        document.getElementById('rfFinalScore').textContent = 'SCORE: ' + rfFinalScore.toLocaleString();
+        const overlay = document.getElementById('nameEntryOverlay');
+        overlay.style.display = 'flex';
+        rfActiveContext = 'overlay';
+        if (rfNewRankIdx >= 0) {
+            document.getElementById('rfRanking').classList.add('hidden');
+            rfShowNameEntry('rfNewRecord', 'rfnc');
+        } else {
+            document.getElementById('rfNewRecord').classList.add('hidden');
+            rfShowRanking('rfRankList', 'rfRanking');
+        }
+    }, 1500);
+}
+
+function rfStartEndingSequence() {
+    rfFinalScore = rfCalcScore();
+    setTimeout(() => {
+        document.getElementById('endFinalScore').textContent = 'SCORE: ' + rfFinalScore.toLocaleString();
+        rfNewRankIdx = rfGetRankPosition(rfFinalScore);
+        rfActiveContext = 'ending';
+        if (rfNewRankIdx >= 0) {
+            document.getElementById('endRanking').classList.add('hidden');
+            rfShowNameEntry('endNewRecord', 'endnc');
+        } else {
+            document.getElementById('endNewRecord').classList.add('hidden');
+            rfShowRanking('endRankList', 'endRanking');
+        }
+    }, 2000);
+}
+
 function initGame() {
     // Clear existing
     G.enemies.forEach(e => scene.remove(e.mesh));
@@ -1528,6 +1797,11 @@ function initGame() {
     document.getElementById('game-over').style.display = 'none';
     document.getElementById('upgrade-panel').style.display = 'none';
     document.getElementById('ending-screen').style.display = 'none';
+    document.getElementById('nameEntryOverlay').style.display = 'none';
+    rfGameOverPhase = '';
+    // Reset ending screen leaderboard elements
+    document.getElementById('endNewRecord').classList.add('hidden');
+    document.getElementById('endRanking').classList.add('hidden');
 }
 
 // ============================================================
@@ -1537,6 +1811,22 @@ const keys = {};
 
 document.addEventListener('keydown', e => {
     keys[e.code] = true;
+
+    // Leaderboard name entry input
+    if (rfGameOverPhase === 'nameEntry') {
+        const pfx = rfGetNcPrefix();
+        if (e.code === 'ArrowUp') { rfNameCharChange(rfNamePos, 1); e.preventDefault(); return; }
+        if (e.code === 'ArrowDown') { rfNameCharChange(rfNamePos, -1); e.preventDefault(); return; }
+        if (e.code === 'ArrowLeft') { rfNamePos = Math.max(0, rfNamePos - 1); rfUpdateNameDisplay(pfx); e.preventDefault(); return; }
+        if (e.code === 'ArrowRight') { rfNamePos = Math.min(2, rfNamePos + 1); rfUpdateNameDisplay(pfx); e.preventDefault(); return; }
+        if (e.code === 'Enter') { rfConfirmName(); e.preventDefault(); return; }
+        e.preventDefault();
+        return;
+    }
+    if (rfGameOverPhase === 'ranking') {
+        e.preventDefault();
+        return;
+    }
 
     // Prevent arrow keys / space from scrolling the page
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
@@ -1784,6 +2074,7 @@ function damagePlayer(amount) {
         G.running = false;
         SFX.stopBGM();
         document.getElementById('game-over').style.display = 'block';
+        rfStartGameOverSequence();
     }
     updateHUD();
 }
@@ -1865,6 +2156,7 @@ function showEnding() {
         `레이저 총 Lv.${G.gunLevel} | 카타나 Lv.${G.swordLevel}<br>` +
         `보유 코인: ${G.coins}`;
     el.style.display = 'flex';
+    rfStartEndingSequence();
 }
 
 // ============================================================

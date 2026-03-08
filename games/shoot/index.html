@@ -21,10 +21,129 @@ canvas {
   width: min(95vw, 67.5vh);
   height: min(142.5vw, 95vh);
 }
+/* ---- Leaderboard Overlay ---- */
+#shootNameOverlay {
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+}
+#shootNewRecord {
+  text-align: center; margin: 10px 0;
+  animation: shootNewRecordIn 0.6s cubic-bezier(0.175,0.885,0.32,1.275) both;
+}
+@keyframes shootNewRecordIn {
+  from { transform: scale(0) rotate(-10deg); opacity: 0; }
+  to { transform: scale(1) rotate(0); opacity: 1; }
+}
+#shootNewRecordTitle {
+  font-size: 22px; font-weight: 900; margin-bottom: 14px;
+  animation: shootNrFlash 0.6s ease-in-out infinite;
+}
+@keyframes shootNrFlash {
+  0%, 100% { color: #FFD700; text-shadow: 0 0 10px #FFD700, 0 0 30px #FF8800; }
+  50% { color: #fff; text-shadow: 0 0 20px #FFD700, 0 0 50px #FF8800, 0 0 80px #FF4400; }
+}
+#shootNameRow { display: flex; gap: 8px; justify-content: center; margin-bottom: 6px; }
+.shoot-name-slot { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.shoot-name-arr {
+  background: none; border: none; color: rgba(255,255,255,0.5);
+  font-size: 18px; cursor: pointer; padding: 2px 10px; line-height: 1;
+  pointer-events: all;
+}
+.shoot-name-arr:hover { color: #FFD700; }
+.shoot-name-arr:active { transform: scale(0.85); }
+.shoot-name-char {
+  width: 48px; height: 54px; display: flex; align-items: center; justify-content: center;
+  font-size: 34px; font-weight: 900; font-family: 'Courier New', monospace;
+  color: #FFD700; background: rgba(0,0,0,0.5);
+  border: 2px solid rgba(255,255,255,0.15); border-radius: 8px;
+}
+.shoot-name-char.active {
+  border-color: #FFD700; background: rgba(255,215,0,0.1);
+  animation: shootNcBlink 0.5s step-end infinite;
+}
+@keyframes shootNcBlink { 50% { border-color: transparent; } }
+#shootNameHint { color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 4px; text-align: center; }
+.shoot-btn-name-ok {
+  margin-top: 10px; padding: 8px 36px; font-size: 18px; font-weight: bold;
+  background: linear-gradient(180deg, #FFB800, #E08900);
+  box-shadow: 0 4px 0 #AA6600; border: none; border-radius: 30px;
+  color: #fff; cursor: pointer; pointer-events: all;
+}
+.shoot-btn-name-ok:active { transform: translateY(2px); box-shadow: 0 2px 0 #AA6600; }
+#shootRanking {
+  width: 100%; margin-top: 14px;
+  animation: shootRankIn 0.4s ease-out both;
+}
+@keyframes shootRankIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+#shootRankTitle {
+  text-align: center; font-size: 18px; font-weight: 900;
+  color: #FFD700; letter-spacing: 4px; margin-bottom: 10px;
+  text-shadow: 0 0 10px rgba(255,215,0,0.3);
+}
+.shoot-rank-row {
+  display: flex; padding: 7px 14px; border-radius: 6px;
+  margin-bottom: 2px; font-size: 14px; font-weight: bold; align-items: center;
+}
+.shoot-rank-row.header {
+  color: rgba(255,255,255,0.35); font-size: 10px;
+  letter-spacing: 1px; margin-bottom: 4px; padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.shoot-rank-row.current {
+  background: rgba(255,215,0,0.12);
+  animation: shootRkHL 1s ease-in-out infinite;
+  border: 1px solid rgba(255,215,0,0.25);
+}
+@keyframes shootRkHL { 50% { background: rgba(255,215,0,0.22); } }
+.shoot-rank-pos {
+  width: 36px; font-family: 'Courier New', monospace; color: #888;
+}
+.shoot-rank-row:nth-child(2) .shoot-rank-pos { color: #FFD700; }
+.shoot-rank-row:nth-child(3) .shoot-rank-pos { color: #C0C0C0; }
+.shoot-rank-row:nth-child(4) .shoot-rank-pos { color: #CD7F32; }
+.shoot-rank-name { flex: 1; color: #fff; font-family: 'Courier New', monospace; letter-spacing: 3px; }
+.shoot-rank-score { width: 70px; text-align: right; color: #FFD700; }
+.shoot-rank-game { width: 80px; text-align: right; color: #88aaff; font-size: 10px; }
+.shoot-rank-you { color: #00DDFF; font-size: 10px; margin-left: 6px; white-space: nowrap; }
+.shoot-go-phase.hidden { display: none; }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
+<div id="shootNameOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:100;display:none;align-items:center;justify-content:center;flex-direction:column;font-family:'Press Start 2P',monospace;">
+    <div style="max-width:420px;width:92%;text-align:center;">
+        <div id="shootOverlayTitle" style="font-size:32px;font-weight:900;color:#FF3333;text-shadow:0 0 20px rgba(255,0,0,0.6);margin-bottom:15px;">GAME OVER</div>
+        <div style="font-size:20px;color:#FFD700;margin-bottom:20px;" id="shootFinalScore">SCORE: 0</div>
+        <div id="shootNewRecord" class="shoot-go-phase hidden">
+            <div id="shootNewRecordTitle">&#9733; NEW RECORD &#9733;</div>
+            <div id="shootNameRow">
+                <div class="shoot-name-slot">
+                    <button class="shoot-name-arr" onclick="shootNameCharChange(0,1)">&#9650;</button>
+                    <div class="shoot-name-char active" id="snc0">A</div>
+                    <button class="shoot-name-arr" onclick="shootNameCharChange(0,-1)">&#9660;</button>
+                </div>
+                <div class="shoot-name-slot">
+                    <button class="shoot-name-arr" onclick="shootNameCharChange(1,1)">&#9650;</button>
+                    <div class="shoot-name-char" id="snc1">A</div>
+                    <button class="shoot-name-arr" onclick="shootNameCharChange(1,-1)">&#9660;</button>
+                </div>
+                <div class="shoot-name-slot">
+                    <button class="shoot-name-arr" onclick="shootNameCharChange(2,1)">&#9650;</button>
+                    <div class="shoot-name-char" id="snc2">A</div>
+                    <button class="shoot-name-arr" onclick="shootNameCharChange(2,-1)">&#9660;</button>
+                </div>
+            </div>
+            <div id="shootNameHint">&#8593;&#8595; 변경 &nbsp; &#8592;&#8594; 이동 &nbsp; ENTER 확인</div>
+            <button class="shoot-btn-name-ok" onclick="shootConfirmName()">OK</button>
+        </div>
+        <div id="shootRanking" class="shoot-go-phase hidden">
+            <div id="shootRankTitle">&#127942; RANKING &#127942;</div>
+            <div id="shootRankList"></div>
+        </div>
+    </div>
+</div>
 <script>
 // ============================================================
 //  베스트 슈터 (Best Shooter) - Kirby Themed Vertical Shooter
@@ -40,6 +159,17 @@ canvas.height = H;
 const keys = {};
 const justPressed = {};
 window.addEventListener('keydown', e => {
+  // Intercept for name entry
+  if (shootGameOverPhase === 'nameEntry') {
+    if (e.code === 'ArrowUp') { shootNameCharChange(shootNamePos, 1); }
+    else if (e.code === 'ArrowDown') { shootNameCharChange(shootNamePos, -1); }
+    else if (e.code === 'ArrowLeft') { shootNamePos = Math.max(0, shootNamePos - 1); shootUpdateNameDisplay(); }
+    else if (e.code === 'ArrowRight') { shootNamePos = Math.min(2, shootNamePos + 1); shootUpdateNameDisplay(); }
+    else if (e.code === 'Enter') { shootConfirmName(); }
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
   if (!keys[e.code]) justPressed[e.code] = true;
   keys[e.code] = true;
   e.preventDefault();
@@ -102,6 +232,116 @@ let bossWarning = 0;
 let stageClearTimer = 0;
 let shakeX = 0, shakeY = 0;
 let shakeTimer = 0;
+
+// ---- Leaderboard ----
+const SHOOT_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+let shootRankings = [];
+let shootNameChars = [0, 0, 0];
+let shootNamePos = 0;
+let shootNewRankIdx = -1;
+let shootGameOverPhase = ''; // '', 'nameEntry', 'ranking'
+
+function shootLoadRankings() {
+  try {
+    shootRankings = JSON.parse(localStorage.getItem('gogo_arcade_leaderboard') || '[]');
+  } catch(e) { shootRankings = []; }
+}
+
+function shootSaveRanking(name, sc) {
+  try {
+    let all = JSON.parse(localStorage.getItem('gogo_arcade_leaderboard') || '[]');
+    all.push({ name, score: sc, game: '베스트슈터', date: new Date().toISOString().slice(0,10) });
+    all.sort((a,b) => b.score - a.score);
+    if (all.length > 30) all.length = 30;
+    localStorage.setItem('gogo_arcade_leaderboard', JSON.stringify(all));
+    shootRankings = all;
+  } catch(e) {}
+}
+
+function shootGetRankPosition(s) {
+  shootLoadRankings();
+  for (let i = 0; i < shootRankings.length; i++) { if (s > shootRankings[i].score) return i; }
+  return shootRankings.length < 30 ? shootRankings.length : -1;
+}
+
+function shootShowNameEntry() {
+  shootGameOverPhase = 'nameEntry';
+  shootNameChars = [0, 0, 0];
+  shootNamePos = 0;
+  const nr = document.getElementById('shootNewRecord');
+  nr.classList.remove('hidden');
+  nr.style.animation = 'none'; nr.offsetHeight; nr.style.animation = '';
+  shootUpdateNameDisplay();
+}
+
+function shootUpdateNameDisplay() {
+  for (let i = 0; i < 3; i++) {
+    const el = document.getElementById('snc' + i);
+    el.textContent = SHOOT_ALPHABET[shootNameChars[i]];
+    el.classList.toggle('active', i === shootNamePos);
+  }
+}
+
+window.shootNameCharChange = function(pos, dir) {
+  if (shootGameOverPhase !== 'nameEntry') return;
+  shootNamePos = pos;
+  shootNameChars[pos] = (shootNameChars[pos] + dir + SHOOT_ALPHABET.length) % SHOOT_ALPHABET.length;
+  shootUpdateNameDisplay();
+};
+
+window.shootConfirmName = function() {
+  if (shootGameOverPhase !== 'nameEntry') return;
+  const name = shootNameChars.map(i => SHOOT_ALPHABET[i]).join('');
+  shootSaveRanking(name, score);
+  document.getElementById('shootNewRecord').classList.add('hidden');
+  shootShowRanking();
+};
+
+function shootShowRanking() {
+  shootGameOverPhase = 'ranking';
+  shootLoadRankings();
+  const list = document.getElementById('shootRankList');
+  const ordinals = ['1ST','2ND','3RD','4TH','5TH','6TH','7TH','8TH','9TH','10TH'];
+
+  let html = '<div class="shoot-rank-row header"><span class="shoot-rank-pos">RANK</span><span class="shoot-rank-name">NAME</span><span class="shoot-rank-score">SCORE</span><span class="shoot-rank-game">GAME</span></div>';
+
+  const display = shootRankings.slice(0, 10);
+  if (display.length === 0) {
+    html += '<div style="text-align:center;color:#666;padding:16px;font-size:13px;">기록 없음</div>';
+  }
+  display.forEach((r, i) => {
+    const isCurrent = (i === shootNewRankIdx && r.score === score && r.game === '베스트슈터');
+    html += '<div class="shoot-rank-row' + (isCurrent ? ' current' : '') + '">';
+    html += '<span class="shoot-rank-pos">' + (ordinals[i] || (i+1)+'TH') + '</span>';
+    html += '<span class="shoot-rank-name">' + (r.name || '---') + '</span>';
+    html += '<span class="shoot-rank-score">' + (r.score || 0).toLocaleString() + '</span>';
+    html += '<span class="shoot-rank-game">' + (r.game || '-') + '</span>';
+    if (isCurrent) html += '<span class="shoot-rank-you">&#9664; YOU</span>';
+    html += '</div>';
+  });
+
+  list.innerHTML = html;
+  const rk = document.getElementById('shootRanking');
+  rk.classList.remove('hidden');
+  rk.style.animation = 'none'; rk.offsetHeight; rk.style.animation = '';
+  shootNewRankIdx = -1;
+}
+
+function shootTriggerOverlay(title, titleColor) {
+  shootNewRankIdx = shootGetRankPosition(score);
+  document.getElementById('shootOverlayTitle').textContent = title;
+  document.getElementById('shootOverlayTitle').style.color = titleColor;
+  document.getElementById('shootOverlayTitle').style.textShadow = '0 0 20px ' + titleColor + '99';
+  document.getElementById('shootFinalScore').textContent = 'SCORE: ' + score.toLocaleString();
+  document.getElementById('shootNewRecord').classList.add('hidden');
+  document.getElementById('shootRanking').classList.add('hidden');
+  document.getElementById('shootNameOverlay').style.display = 'flex';
+  if (shootNewRankIdx >= 0) {
+    shootShowNameEntry();
+  } else {
+    shootShowRanking();
+  }
+}
 
 // ---- Entities ----
 let player, bullets, enemyBullets, enemies, boss, particles, items, stars;
@@ -870,6 +1110,8 @@ function startGame() {
   stage = 1;
   score = 0;
   initGame();
+  document.getElementById('shootNameOverlay').style.display = 'none';
+  shootGameOverPhase = '';
 }
 
 function startStage(stageNum) {
@@ -1507,6 +1749,7 @@ function checkCollisions() {
             state = 'victory';
             stageClearTimer = 240;
             sfxStageClear();
+            setTimeout(() => { shootTriggerOverlay('VICTORY!', '#FFD700'); }, 2000);
           }
           boss = null;
         }
@@ -1574,6 +1817,7 @@ function playerHit() {
   if (player.hp <= 0) {
     state = 'gameOver';
     spawnParticles(player.x, player.y, '#FF4444', 25, 5, 30);
+    setTimeout(() => { shootTriggerOverlay('GAME OVER', '#FF3333'); }, 2000);
   }
 }
 

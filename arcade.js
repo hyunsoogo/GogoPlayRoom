@@ -303,6 +303,7 @@ function createProps() {
     { x: 5.2, y: 3.0, w: 1.0, h: 1.0, color: '#00bbaa', text: 'HIGH\nSCORE' },
     { x: 5.2, y: 1.2, w: 0.9, h: 1.1, color: '#33cc66', text: 'PLAY!' },
   ];
+  let leaderboardPoster = null;
   posterData.forEach((p) => {
     const pCanvas = document.createElement('canvas');
     pCanvas.width = 256;
@@ -327,6 +328,11 @@ function createProps() {
     const pGeo = new THREE.PlaneGeometry(p.w, p.h);
     const poster = new THREE.Mesh(pGeo, pMat);
     poster.position.set(p.x, p.y, -1.45);
+    // Make HIGH SCORE poster clickable
+    if (p.text === 'HIGH\nSCORE') {
+      poster.userData.type = 'leaderboard';
+      leaderboardPoster = poster;
+    }
     scene.add(poster);
   });
 
@@ -521,6 +527,7 @@ function getInteractableObjects() {
       }
     });
   });
+  if (leaderboardPoster) objects.push(leaderboardPoster);
   return objects;
 }
 
@@ -550,6 +557,8 @@ renderer.domElement.addEventListener('click', (e) => {
         cabinet.userData.pressStartSprite.visible = false;
         launchGame(cabinet.userData.game, cabinet);
       }
+    } else if (hit.userData.type === 'leaderboard') {
+      openLeaderboard();
     }
   }
 });
@@ -567,7 +576,7 @@ renderer.domElement.addEventListener('mousemove', (e) => {
     renderer.domElement.style.cursor = 'none';
   } else if (intersects.length > 0) {
     const hit = intersects[0].object;
-    if (hit.userData.type === 'coinSlot' || (hit.userData.type === 'screen' && findCabinetByGameId(hit.userData.gameId).userData.isReady)) {
+    if (hit.userData.type === 'coinSlot' || hit.userData.type === 'leaderboard' || (hit.userData.type === 'screen' && findCabinetByGameId(hit.userData.gameId).userData.isReady)) {
       renderer.domElement.style.cursor = 'pointer';
     } else {
       renderer.domElement.style.cursor = 'default';
@@ -1006,3 +1015,36 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
 });
+
+// ===== Leaderboard =====
+function openLeaderboard() {
+  const modal = document.getElementById('leaderboard-modal');
+  const list = document.getElementById('leaderboard-list');
+  let rankings = [];
+  try { rankings = JSON.parse(localStorage.getItem('gogo_arcade_leaderboard') || '[]'); } catch(e) {}
+
+  const ordinals = ['1ST','2ND','3RD','4TH','5TH','6TH','7TH','8TH','9TH','10TH',
+                     '11TH','12TH','13TH','14TH','15TH','16TH','17TH','18TH','19TH','20TH'];
+  let html = '<div class="lb-row header"><span class="lb-pos">RANK</span><span class="lb-name">NAME</span><span class="lb-score">SCORE</span><span class="lb-game">GAME</span></div>';
+
+  const display = rankings.slice(0, 20);
+  if (display.length === 0) {
+    html += '<div style="text-align:center;color:#666;padding:20px;font-size:11px;">기록 없음</div>';
+  }
+  display.forEach((r, i) => {
+    html += '<div class="lb-row">';
+    html += '<span class="lb-pos">' + (ordinals[i] || (i+1)+'TH') + '</span>';
+    html += '<span class="lb-name">' + (r.name || '???') + '</span>';
+    html += '<span class="lb-score">' + (r.score || 0).toLocaleString() + '</span>';
+    html += '<span class="lb-game">' + (r.game || '') + '</span>';
+    html += '</div>';
+  });
+
+  list.innerHTML = html;
+  modal.classList.remove('hidden');
+}
+
+function closeLeaderboard() {
+  document.getElementById('leaderboard-modal').classList.add('hidden');
+}
+window.closeLeaderboard = closeLeaderboard;
