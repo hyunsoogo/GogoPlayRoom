@@ -238,8 +238,16 @@ function stopArcadeBGM() {
   if (bgmGain) { try { bgmGain.disconnect(); } catch(e) {} bgmGain = null; }
 }
 
-// Start BGM on first user interaction
-document.addEventListener('click', () => { startArcadeBGM(); }, { once: true });
+// Start BGM on user interaction (retry until audioCtx is running)
+function tryStartBGM() {
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(() => startArcadeBGM());
+  } else {
+    startArcadeBGM();
+  }
+}
+document.addEventListener('click', tryStartBGM);
+document.addEventListener('keydown', tryStartBGM);
 
 // ===== Three.js Scene Setup =====
 const scene = new THREE.Scene();
