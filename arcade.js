@@ -734,6 +734,71 @@ gameIframe.addEventListener('load', () => {
   }
 });
 
+// ===== Password Setup (first time) =====
+let savedPin = localStorage.getItem('arcade-pin');
+const setupModal = document.getElementById('setup-modal');
+const setupInputs = setupModal.querySelectorAll('.pin-input');
+const setupStep = document.getElementById('setup-step');
+const setupHint = document.getElementById('setup-hint');
+
+let setupFirstPin = '';
+
+function showSetupModal() {
+  setupFirstPin = '';
+  setupStep.textContent = '1 / 2';
+  setupHint.textContent = '비밀번호 입력';
+  setupModal.classList.remove('hidden');
+  setupInputs.forEach((i) => (i.value = ''));
+  setupInputs[0].focus();
+}
+
+setupInputs.forEach((input, idx) => {
+  input.addEventListener('input', () => {
+    if (input.value.length === 1 && idx < 3) {
+      setupInputs[idx + 1].focus();
+    }
+    if (idx === 3 && input.value.length === 1) {
+      const pin = Array.from(setupInputs).map((i) => i.value).join('');
+      if (!setupFirstPin) {
+        setupFirstPin = pin;
+        setupStep.textContent = '2 / 2';
+        setupHint.textContent = '한번 더 입력';
+        setupInputs.forEach((i) => (i.value = ''));
+        setupInputs[0].focus();
+      } else {
+        if (pin === setupFirstPin) {
+          playCoinSound();
+          localStorage.setItem('arcade-pin', pin);
+          savedPin = pin;
+          setupModal.classList.add('hidden');
+        } else {
+          playErrorSound();
+          setupHint.textContent = '불일치! 다시 입력';
+          const content = setupModal.querySelector('.modal-content');
+          content.classList.add('shake');
+          setTimeout(() => {
+            content.classList.remove('shake');
+            setupFirstPin = '';
+            setupStep.textContent = '1 / 2';
+            setupHint.textContent = '비밀번호 입력';
+            setupInputs.forEach((i) => (i.value = ''));
+            setupInputs[0].focus();
+          }, 400);
+        }
+      }
+    }
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && input.value === '' && idx > 0) {
+      setupInputs[idx - 1].focus();
+    }
+  });
+});
+
+if (!savedPin) {
+  showSetupModal();
+}
+
 // ===== Password Modal =====
 let coinQty = 1;
 const qtyValueEl = document.getElementById('qty-value');
@@ -768,7 +833,7 @@ pinInputs.forEach((input, idx) => {
     }
     if (idx === 3 && input.value.length === 1) {
       const pin = Array.from(pinInputs).map((i) => i.value).join('');
-      if (pin === '4437') {
+      if (pin === savedPin) {
         playCoinSound();
         updateCoins(coins + coinQty);
         passwordModal.classList.add('hidden');

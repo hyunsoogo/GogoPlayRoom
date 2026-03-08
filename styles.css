@@ -303,23 +303,7 @@ body {
 }
 
 #exit-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  font-family: 'Press Start 2P', cursive;
-  font-size: 10px;
-  padding: 8px 16px;
-  background: rgba(0,0,0,0.7);
-  color: #ff4444;
-  border: 2px solid #ff4444;
-  cursor: pointer;
-  z-index: 10;
-  transition: all 0.2s;
-}
-
-#exit-btn:hover {
-  background: #ff4444;
-  color: #fff;
+  display: none;
 }
 
 /* ===== Responsive ===== */

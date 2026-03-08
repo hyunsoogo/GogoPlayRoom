@@ -48,6 +48,23 @@
     </div>
   </div>
 
+  <!-- Setup Password Modal (first time) -->
+  <div id="setup-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-title">비밀번호 설정</div>
+      <div class="modal-subtitle">4자리 숫자를 입력하세요</div>
+      <div id="setup-pin-inputs">
+        <input type="password" maxlength="1" class="pin-input" data-index="0" inputmode="numeric">
+        <input type="password" maxlength="1" class="pin-input" data-index="1" inputmode="numeric">
+        <input type="password" maxlength="1" class="pin-input" data-index="2" inputmode="numeric">
+        <input type="password" maxlength="1" class="pin-input" data-index="3" inputmode="numeric">
+      </div>
+      <div id="setup-step" class="modal-subtitle">1 / 2</div>
+      <div id="setup-hint" class="modal-subtitle">비밀번호 입력</div>
+    </div>
+  </div>
+
   <!-- Game Viewport -->
   <div id="game-viewport" class="hidden">
     <div id="game-loading">LOADING...</div>
