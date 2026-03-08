@@ -418,7 +418,6 @@ function createBackWall() {
 createBackWall();
 
 // ===== Props (Room Decorations) =====
-let leaderboardPoster = null;
 function createProps() {
   // --- Trash Can (right side) ---
   const trashGroup = new THREE.Group();
@@ -503,11 +502,6 @@ function createProps() {
     const pGeo = new THREE.PlaneGeometry(p.w, p.h);
     const poster = new THREE.Mesh(pGeo, pMat);
     poster.position.set(p.x, p.y, -1.45);
-    // Make HIGH SCORE poster clickable
-    if (p.text === 'HIGH\nSCORE') {
-      poster.userData.type = 'leaderboard';
-      leaderboardPoster = poster;
-    }
     scene.add(poster);
   });
 
@@ -702,7 +696,6 @@ function getInteractableObjects() {
       }
     });
   });
-  if (leaderboardPoster) objects.push(leaderboardPoster);
   return objects;
 }
 
@@ -732,8 +725,6 @@ renderer.domElement.addEventListener('click', (e) => {
         cabinet.userData.pressStartSprite.visible = false;
         launchGame(cabinet.userData.game, cabinet);
       }
-    } else if (hit.userData.type === 'leaderboard') {
-      openLeaderboard();
     }
   }
 });
@@ -751,7 +742,7 @@ renderer.domElement.addEventListener('mousemove', (e) => {
     renderer.domElement.style.cursor = 'none';
   } else if (intersects.length > 0) {
     const hit = intersects[0].object;
-    if (hit.userData.type === 'coinSlot' || hit.userData.type === 'leaderboard' || (hit.userData.type === 'screen' && findCabinetByGameId(hit.userData.gameId).userData.isReady)) {
+    if (hit.userData.type === 'coinSlot' || (hit.userData.type === 'screen' && findCabinetByGameId(hit.userData.gameId).userData.isReady)) {
       renderer.domElement.style.cursor = 'pointer';
     } else {
       renderer.domElement.style.cursor = 'default';
@@ -763,22 +754,12 @@ renderer.domElement.addEventListener('mousemove', (e) => {
 
 // ===== Mouse Hover Scale =====
 let hoveredCabinetId = null;
-let posterHovered = false;
-const POSTER_BASE_SCALE = 1.0;
-const POSTER_HOVER_SCALE = 1.15;
-
 renderer.domElement.addEventListener('mousemove', (e) => {
   const rect = renderer.domElement.getBoundingClientRect();
   const mx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
   const my = -((e.clientY - rect.top) / rect.height) * 2 + 1;
   const hoverRay = new THREE.Raycaster();
   hoverRay.setFromCamera(new THREE.Vector2(mx, my), camera);
-
-  // Check poster hover
-  if (leaderboardPoster) {
-    const posterHits = hoverRay.intersectObject(leaderboardPoster);
-    posterHovered = posterHits.length > 0;
-  }
 
   const allMeshes = [];
   cabinetGroups.forEach((g) => g.traverse((c) => { if (c.isMesh) allMeshes.push(c); }));
@@ -1133,13 +1114,6 @@ function animate(time) {
     group.scale.set(s, s, s);
   });
 
-  // Poster hover scale
-  if (leaderboardPoster) {
-    const targetS = posterHovered ? POSTER_HOVER_SCALE : POSTER_BASE_SCALE;
-    const cs = leaderboardPoster.scale.x + (targetS - leaderboardPoster.scale.x) * 0.1;
-    leaderboardPoster.scale.set(cs, cs, 1);
-  }
-
   // PRESS START blink
   if (time - lastBlinkTime > 500) {
     blinkVisible = !blinkVisible;
@@ -1212,35 +1186,3 @@ window.addEventListener('resize', () => {
   renderer.setSize(w, h);
 });
 
-// ===== Leaderboard =====
-function openLeaderboard() {
-  const modal = document.getElementById('leaderboard-modal');
-  const list = document.getElementById('leaderboard-list');
-  let rankings = [];
-  try { rankings = JSON.parse(localStorage.getItem('gogo_arcade_leaderboard') || '[]'); } catch(e) {}
-
-  const ordinals = ['1ST','2ND','3RD','4TH','5TH','6TH','7TH','8TH','9TH','10TH',
-                     '11TH','12TH','13TH','14TH','15TH','16TH','17TH','18TH','19TH','20TH'];
-  let html = '<div class="lb-row header"><span class="lb-pos">RANK</span><span class="lb-name">NAME</span><span class="lb-score">SCORE</span><span class="lb-game">GAME</span></div>';
-
-  const display = rankings.slice(0, 20);
-  if (display.length === 0) {
-    html += '<div style="text-align:center;color:#666;padding:20px;font-size:11px;">기록 없음</div>';
-  }
-  display.forEach((r, i) => {
-    html += '<div class="lb-row">';
-    html += '<span class="lb-pos">' + (ordinals[i] || (i+1)+'TH') + '</span>';
-    html += '<span class="lb-name">' + (r.name || '???') + '</span>';
-    html += '<span class="lb-score">' + (r.score || 0).toLocaleString() + '</span>';
-    html += '<span class="lb-game">' + (r.game || '') + '</span>';
-    html += '</div>';
-  });
-
-  list.innerHTML = html;
-  modal.classList.remove('hidden');
-}
-
-function closeLeaderboard() {
-  document.getElementById('leaderboard-modal').classList.add('hidden');
-}
-window.closeLeaderboard = closeLeaderboard;
