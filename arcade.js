@@ -243,6 +243,7 @@ function createBackWall() {
 createBackWall();
 
 // ===== Props (Room Decorations) =====
+let leaderboardPoster = null;
 function createProps() {
   // --- Trash Can (right side) ---
   const trashGroup = new THREE.Group();
@@ -300,10 +301,9 @@ function createProps() {
   // --- Wall Posters/Frames ---
   const posterData = [
     { x: -5.2, y: 3.0, w: 1.2, h: 1.6, color: '#ff3333', text: 'GAME\nON!' },
-    { x: 5.2, y: 3.0, w: 1.0, h: 1.0, color: '#00bbaa', text: 'HIGH\nSCORE' },
+    { x: 0, y: 4.0, w: 2.0, h: 1.2, color: '#00bbaa', text: 'HIGH\nSCORE' },
     { x: 5.2, y: 1.2, w: 0.9, h: 1.1, color: '#33cc66', text: 'PLAY!' },
   ];
-  let leaderboardPoster = null;
   posterData.forEach((p) => {
     const pCanvas = document.createElement('canvas');
     pCanvas.width = 256;
