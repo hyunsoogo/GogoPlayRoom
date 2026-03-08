@@ -301,7 +301,7 @@ function createProps() {
   // --- Wall Posters/Frames ---
   const posterData = [
     { x: -5.2, y: 3.0, w: 1.2, h: 1.6, color: '#ff3333', text: 'GAME\nON!' },
-    { x: 0, y: 4.0, w: 2.0, h: 1.2, color: '#00bbaa', text: 'HIGH\nSCORE' },
+    { x: 5.2, y: 3.0, w: 1.0, h: 1.0, color: '#00bbaa', text: 'HIGH\nSCORE' },
     { x: 5.2, y: 1.2, w: 0.9, h: 1.1, color: '#33cc66', text: 'PLAY!' },
   ];
   posterData.forEach((p) => {
@@ -588,6 +588,9 @@ renderer.domElement.addEventListener('mousemove', (e) => {
 
 // ===== Mouse Hover Scale =====
 let hoveredCabinetId = null;
+let posterHovered = false;
+const POSTER_BASE_SCALE = 1.0;
+const POSTER_HOVER_SCALE = 1.15;
 
 renderer.domElement.addEventListener('mousemove', (e) => {
   const rect = renderer.domElement.getBoundingClientRect();
@@ -595,6 +598,13 @@ renderer.domElement.addEventListener('mousemove', (e) => {
   const my = -((e.clientY - rect.top) / rect.height) * 2 + 1;
   const hoverRay = new THREE.Raycaster();
   hoverRay.setFromCamera(new THREE.Vector2(mx, my), camera);
+
+  // Check poster hover
+  if (leaderboardPoster) {
+    const posterHits = hoverRay.intersectObject(leaderboardPoster);
+    posterHovered = posterHits.length > 0;
+  }
+
   const allMeshes = [];
   cabinetGroups.forEach((g) => g.traverse((c) => { if (c.isMesh) allMeshes.push(c); }));
   const hits = hoverRay.intersectObjects(allMeshes);
@@ -943,6 +953,13 @@ function animate(time) {
     const s = group.scale.x + (targetScale - group.scale.x) * 0.08;
     group.scale.set(s, s, s);
   });
+
+  // Poster hover scale
+  if (leaderboardPoster) {
+    const targetS = posterHovered ? POSTER_HOVER_SCALE : POSTER_BASE_SCALE;
+    const cs = leaderboardPoster.scale.x + (targetS - leaderboardPoster.scale.x) * 0.1;
+    leaderboardPoster.scale.set(cs, cs, 1);
+  }
 
   // PRESS START blink
   if (time - lastBlinkTime > 500) {
