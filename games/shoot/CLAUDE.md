@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-"베스트 슈터 (Best Shooter)" — 커비 테마의 세로 스크롤 슈팅 게임. 단일 `index.html` 파일(~1950줄)에 HTML5 Canvas + vanilla JavaScript로 구현된 자체 완결형 웹 게임이다.
+"베스트 슈터 (Best Shooter)" — 커비 테마의 세로 스크롤 슈팅 게임. 단일 `index.html` 파일(~4200줄)에 HTML5 Canvas + vanilla JavaScript로 구현된 자체 완결형 웹 게임이다.
 
 ## Running
 
@@ -21,11 +21,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Game State Machine
 `state` 변수로 관리: `title` → `stageIntro` → `playing` → `boss` → `stageClear` → (다음 스테이지 또는 `victory`)
 - `gameOver`: HP 소진 시
-- 2개 스테이지: Stage 1 (메타나이트 보스), Stage 2 (기간트 에지 보스)
+- 10개 스테이지: Stage 1 (메타나이트) → 2 (기간트 에지) → 3 (다크 매터) → 4 (마르크) → 5 (제로) → 6 (마버로아) → 7 (디디디대왕) → 8 (어나더 나이트메어) → 9 (킹D마인드) → 10 (마스터 크라운)
 
 ### Core Systems (코드 순서)
 1. **Input** (~L40): `keys`/`justPressed` 객체로 키보드 입력 관리
-2. **Audio** (~L50): Web Audio API로 효과음 생성 (oscillator 기반, 외부 파일 없음)
+2. **Audio** (~L50): Web Audio API로 효과음 + BGM 생성 (oscillator 기반, 외부 파일 없음)
 3. **Image Loading** (~L110): 7개 이미지 파일을 `images` 객체에 로드
 4. **Character Drawing** (~L193): 각 캐릭터를 Canvas 2D로 직접 그리는 함수들 (`drawKirby`, `drawWaddleDee`, `drawHotHead`, `drawWaterGalbros`, `drawMechaWaddleDee`, `drawMetaKnight`, `drawGigantEdge`)
 5. **Game Init** (~L845): `initGame()`, `startGame()`, `startStage()`
@@ -38,7 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Game Mechanics
 - **능력 시스템**: 적을 흡입(X키)하면 해당 적의 능력 획득 — `fire`(관통, 고데미지), `water`(3방향 확산)
 - **적 종류**: waddledee(일반), hothead(fire 능력), watergalbros(water 능력), mechawaddledee(기계)
-- **보스 패턴**: MetaKnight(swordBeam, dash, multiSlash, tornado), GigantEdge(swordSlam, shieldBash, rockThrow, charge) — 각 보스 HP 40% 이하 시 phase 2 진입
+- **보스 패턴**: 각 보스 HP 40% 이하 시 phase 2 진입 (새 패턴 추가 + 기존 패턴 강화). 10개 보스 각각 3~4개 공격 패턴 보유
 - **아이템**: health(토마토), star(점수) — 적 처치 시 확률 드롭
 
 ### Asset Files
